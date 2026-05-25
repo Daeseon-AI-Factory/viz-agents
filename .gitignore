@@ -1,0 +1,29 @@
+# Python venv
+.venv/
+__pycache__/
+*.pyc
+
+# 로컬 API 키 저장 (절대 커밋 X)
+.local_key.txt
+**/.local_key.txt
+
+# 사용자 데이터 (jsonl)
+.feedback.jsonl
+**/.feedback.jsonl
+.favorites.jsonl
+**/.favorites.jsonl
+
+# 로그
+*.log
+/tmp/
+
+# macOS
+.DS_Store
+
+# 에디터
+.vscode/
+.idea/
+
+# 백업
+*.bak
+*.bak.*

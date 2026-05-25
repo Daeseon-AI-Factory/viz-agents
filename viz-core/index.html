@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>viz-core</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --dim: #6e7681;
+    --accent: #58a6ff;
+    --user: #d29922;
+    --edit: #f78166;
+    --bash: #3fb950;
+    --search: #a371f7;
+    --agent: #db61a2;
+    --danger: #f85149;
+    --add: #3fb950;
+    --del: #f85149;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #ffffff; --panel: #f6f8fa; --border: #d0d7de;
+      --text: #1f2328; --muted: #656d76; --dim: #8c959f;
+      --accent: #0969da;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    padding: 14px;
+    max-width: 1100px;
+    margin: 0 auto;
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* 헤더 — 미니멀 */
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--panel);
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .status { font-weight: 600; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
+  .status.active .dot { background: var(--bash); animation: pulse 1.2s infinite; }
+  .status.idle .dot { background: var(--muted); }
+  .status.error .dot { background: var(--danger); }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(63,185,80,0.6); }
+    50% { box-shadow: 0 0 0 6px rgba(63,185,80,0); }
+  }
+  .stats { color: var(--muted); font-family: ui-monospace, monospace; font-size: 12px; display: flex; gap: 10px; align-items: center; }
+  .llm-badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+  .llm-on { background: rgba(63,185,80,0.15); color: var(--bash); border: 1px solid var(--bash); }
+  .llm-off { background: rgba(210,153,34,0.15); color: var(--user); border: 1px solid var(--user); }
+  .key-btn {
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); padding: 4px 10px; border-radius: 6px;
+    font-size: 11.5px; cursor: pointer; font-family: inherit;
+  }
+  .key-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* NOW 박스 */
+  .now-box {
+    background: linear-gradient(135deg, rgba(15,42,69,0.6) 0%, var(--panel) 100%);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 16px 22px; margin-bottom: 12px;
+    transition: all 0.3s ease;
+  }
+  .now-box.idle {
+    background: linear-gradient(135deg, var(--panel) 0%, var(--bg) 100%);
+    border-color: var(--border);
+  }
+  .now-label { font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; font-weight: 700; }
+  .now-box.idle .now-label { color: var(--dim); }
+  .now-text { color: var(--text); font-weight: 600; font-size: 19px; line-height: 1.35; }
+  .now-box.idle .now-text { color: var(--muted); font-weight: 500; }
+  .now-sub { color: var(--muted); font-size: 12px; margin-top: 6px; font-family: ui-monospace, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* 자연어 입력 */
+  .req-bar {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px;
+    margin-bottom: 12px; display: flex; gap: 8px; align-items: center;
+  }
+  .req-bar input {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); padding: 7px 10px; border-radius: 6px;
+    font-family: inherit; font-size: 13px;
+  }
+  .req-bar input:focus { outline: none; border-color: var(--accent); }
+  .req-btn-primary {
+    background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    padding: 7px 14px; border-radius: 6px; cursor: pointer;
+    font-size: 12px; font-weight: 600;
+  }
+  .req-status { font-size: 11px; color: var(--muted); min-width: 30px; }
+
+  /* Timeline */
+  #timeline { display: flex; flex-direction: column; gap: 12px; }
+
+  .session-group {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+    animation: slideIn 0.22s ease-out;
+    position: relative;
+  }
+  .session-group::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 4px; border-radius: 12px 0 0 12px;
+    background: var(--sgcolor, var(--dim));
+  }
+  .sg-header {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11.5px; color: var(--muted);
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    margin-bottom: 10px; font-family: ui-monospace, monospace;
+  }
+  .sg-header .sdot {
+    width: 10px; height: 10px; border-radius: 50%;
+    box-shadow: 0 0 6px var(--sgcolor, var(--dim));
+  }
+  .sg-header .sg-id { color: var(--text); font-weight: 700; }
+  .sg-header .sg-meta { margin-left: auto; color: var(--dim); font-size: 11px; }
+  .sg-nodes { display: flex; flex-direction: column; gap: 0; }
+  .node-conn { align-self: flex-start; margin-left: 11px; color: var(--dim); font-size: 9px; padding: 1px 0; }
+  .node-conn::before { content: "▼"; }
+
+  .node {
+    background: var(--bg); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent); border-radius: 6px;
+    padding: 7px 11px; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12.5px; line-height: 1.5;
+    transition: transform 0.15s ease;
+    animation: slideIn 0.18s ease-out;
+  }
+  .node:hover { transform: translateX(2px); }
+  .node.user { border-left-color: var(--user); background: rgba(210,153,34,0.05); }
+  .node.read { border-left-color: var(--accent); }
+  .node.edit, .node.write { border-left-color: var(--edit); }
+  .node.bash { border-left-color: var(--bash); }
+  .node.search { border-left-color: var(--search); }
+  .node.agent { border-left-color: var(--agent); background: rgba(219,97,162,0.05); }
+  .node.stop { border-left-color: var(--dim); opacity: 0.65; }
+  .node.askq { border-left-color: var(--user); }
+  .node.summary {
+    border-left-color: var(--accent);
+    background: linear-gradient(to right, rgba(88,166,255,0.08) 0%, var(--bg) 70%);
+    padding: 11px 14px; font-family: -apple-system, sans-serif; font-size: 13px;
+  }
+  .node-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: nowrap; }
+  .node-ts { color: var(--dim); font-size: 11px; flex-shrink: 0; min-width: 56px; }
+  .node-icon { flex-shrink: 0; font-size: 14px; }
+  .node-tool { font-weight: 700; color: var(--text); flex-shrink: 0; }
+  .node-detail { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+  .node.expandable { cursor: pointer; }
+  .node.expandable:hover { background: rgba(28,33,40,0.5); }
+  .node-body {
+    display: none; margin-top: 8px; padding: 10px;
+    background: var(--bg); border-radius: 5px; white-space: pre-wrap;
+    font-size: 11.5px; max-height: 300px; overflow: auto;
+    color: var(--muted); border: 1px solid var(--border);
+  }
+  .node.expandable.open .node-body { display: block; }
+
+  .summary-line { color: var(--text); font-weight: 600; line-height: 1.5; font-size: 14px; margin-top: 6px; }
+  .summary-next { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .summary-files { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+  .summary-file { background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; color: var(--muted); font-family: ui-monospace, monospace; font-size: 11px; }
+  .fav-btn {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    padding: 3px 10px; border-radius: 6px; cursor: pointer; font-size: 13px;
+    margin-top: 10px; float: right;
+  }
+  .fav-btn:hover { border-color: var(--user); color: var(--user); }
+
+  /* viz_kind 컨테이너 */
+  .viz-container {
+    margin-top: 12px; padding: 12px;
+    background: var(--panel); border-radius: 8px;
+    border: 1px solid var(--border);
+    animation: fadeIn 0.3s ease-out;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .viz-kind-label {
+    font-size: 10px; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.6px;
+    margin-bottom: 8px; font-weight: 700;
+    font-family: ui-monospace, monospace;
+  }
+
+  /* 모든 viz_kind 렌더러 스타일 */
+  .viz-diff-file { color: var(--muted); font-family: ui-monospace, monospace; font-size: 11.5px; margin-bottom: 8px; }
+  .viz-diff-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .viz-diff-side {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 5px; padding: 8px 10px;
+    font-family: ui-monospace, monospace; font-size: 11.5px;
+    line-height: 1.5; white-space: pre-wrap; max-height: 240px; overflow: auto;
+  }
+  .viz-diff-side.before { border-left: 3px solid var(--del); }
+  .viz-diff-side.after { border-left: 3px solid var(--add); }
+  .viz-diff-label { font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+
+  .viz-gauge { display: flex; flex-direction: column; gap: 6px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; }
+  .viz-gauge-label { font-size: 12px; color: var(--muted); }
+  .viz-gauge-value { font-size: 28px; font-weight: 700; color: var(--text); font-family: ui-monospace, monospace; }
+  .viz-gauge-bar { background: var(--border); height: 8px; border-radius: 4px; overflow: hidden; }
+  .viz-gauge-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--bash)); transition: width 0.6s ease; }
+  .viz-gauge-unit { font-size: 11px; color: var(--dim); }
+
+  .viz-table-wrap { overflow: auto; max-height: 320px; }
+  .viz-table { width: 100%; border-collapse: collapse; font-family: ui-monospace, monospace; font-size: 11.5px; }
+  .viz-table th, .viz-table td { padding: 5px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+  .viz-table th { color: var(--muted); font-weight: 600; background: var(--bg); position: sticky; top: 0; }
+
+  .viz-flow { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .viz-flow-step { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 11.5px; display: flex; align-items: center; gap: 5px; }
+  .viz-flow-step.done { border-color: var(--bash); color: var(--bash); }
+  .viz-flow-step.now { border-color: var(--accent); background: rgba(88,166,255,0.1); color: var(--text); font-weight: 600; animation: pulseBox 1.2s infinite; }
+  .viz-flow-step.todo { color: var(--dim); }
+  .viz-flow-arrow { color: var(--dim); font-size: 12px; }
+  @keyframes pulseBox {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(88,166,255,0.4); }
+    50% { box-shadow: 0 0 0 5px rgba(88,166,255,0); }
+  }
+
+  .viz-badge { padding: 6px 14px; border-radius: 14px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+  .viz-badge.success { background: rgba(63,185,80,0.15); color: var(--bash); border: 1px solid var(--bash); }
+  .viz-badge.error { background: rgba(248,81,73,0.15); color: var(--danger); border: 1px solid var(--danger); }
+  .viz-badge.warning { background: rgba(210,153,34,0.15); color: var(--user); border: 1px solid var(--user); }
+  .viz-badge.info { background: rgba(88,166,255,0.15); color: var(--accent); border: 1px solid var(--accent); }
+
+  .viz-code-wrap { background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 10px; overflow: auto; max-height: 280px; }
+  .viz-code-lang { font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+  .viz-code-block { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--text); white-space: pre; line-height: 1.55; }
+
+  /* AskUserQuestion */
+  .askq-question { margin-top: 10px; padding: 10px 12px; background: var(--panel); border-radius: 6px; color: var(--text); font-size: 13px; line-height: 1.5; border: 1px solid var(--border); }
+  .askq-multi { font-size: 10.5px; color: var(--accent); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .askq-options { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+  .opt { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 9px 11px; font-size: 11.5px; line-height: 1.5; display: flex; flex-direction: column; gap: 4px; transition: transform 0.15s; }
+  .opt:hover { transform: translateY(-2px); }
+  .opt.recommended { border-color: var(--bash); background: rgba(63,185,80,0.05); }
+  .opt-header { display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--text); }
+  .opt-tag { font-size: 9.5px; padding: 1px 6px; border-radius: 8px; background: var(--bash); color: #fff; font-weight: 700; }
+  .opt-desc { color: var(--muted); font-size: 11px; font-weight: 400; }
+  .opt-preview { margin-top: 4px; padding: 6px 8px; background: rgba(0,0,0,0.3); border-radius: 4px; font-family: ui-monospace, monospace; font-size: 10.5px; white-space: pre-wrap; color: var(--muted); max-height: 130px; overflow: auto; border: 1px solid var(--border); line-height: 1.4; }
+
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
+  .empty { text-align: center; color: var(--muted); padding: 40px 20px; border: 1px dashed var(--border); border-radius: 10px; }
+  .empty h2 { font-size: 16px; margin-bottom: 6px; color: var(--text); }
+  .empty p { font-size: 12.5px; line-height: 1.6; }
+
+  /* 모달 */
+  .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 22px 24px; width: min(520px, 90vw); }
+  .modal h2 { font-size: 15px; margin-bottom: 4px; color: var(--text); }
+  .modal .sub { color: var(--muted); font-size: 12px; line-height: 1.5; margin-bottom: 14px; }
+  .modal label { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; margin-top: 12px; }
+  .modal input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: 6px; font-family: ui-monospace, monospace; font-size: 13px; }
+  .modal input:focus { outline: none; border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .modal-btn { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 12.5px; }
+  .modal-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .modal-btn.danger { color: var(--danger); border-color: var(--danger); }
+  .modal-status { margin-top: 12px; padding: 8px 10px; border-radius: 6px; font-size: 12px; display: none; }
+  .modal-status.show { display: block; }
+  .modal-status.ok { background: rgba(63,185,80,0.1); color: var(--bash); border: 1px solid var(--bash); }
+  .modal-status.err { background: rgba(248,81,73,0.1); color: var(--danger); border: 1px solid var(--danger); }
+  .modal-current { padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--muted); margin-bottom: 8px; }
+
+  @media (max-width: 768px) {
+    body { padding: 8px; font-size: 13px; }
+    .now-text { font-size: 16px; }
+    .askq-options { grid-template-columns: 1fr; }
+    .viz-diff-panel { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="status idle" id="status"><span class="dot"></span><span id="status-text">대기 중</span></div>
+  <div class="stats">
+    <span id="stat-events">0 events</span>
+    <span class="llm-badge llm-off" id="llm-badge">LLM</span>
+    <button class="key-btn" id="key-btn" type="button">⚙️</button>
+  </div>
+</header>
+
+<div class="now-box idle" id="now-box">
+  <div class="now-label">지금</div>
+  <div class="now-text" id="now-text">대기 중</div>
+  <div class="now-sub" id="now-sub"></div>
+</div>
+
+<div class="req-bar">
+  <span style="color:var(--accent); font-size:14px;">💬</span>
+  <input type="text" id="req-input" placeholder="자연어로 시각 요청 (예: 지난 5분 활동을 KPI로 보여줘)">
+  <button class="req-btn-primary" id="req-btn">생성</button>
+  <span class="req-status" id="req-status"></span>
+</div>
+
+<!-- ★ 코드 파일 분석 (LLM 위임 — 어떤 언어든) -->
+<div class="req-bar" id="code-bar"
+     ondragover="event.preventDefault(); this.style.background='rgba(63,185,80,0.1)';"
+     ondragleave="this.style.background='';"
+     ondrop="handleDrop(event); this.style.background='';">
+  <span style="color:var(--bash); font-size:14px;">📄</span>
+  <input type="text" id="code-input" placeholder="파일 경로 (어떤 언어든) / 드래그 / 📁">
+  <button class="key-btn" id="picker-btn" type="button" title="파일 탐색">📁</button>
+  <button class="key-btn" id="file-upload-btn" type="button" title="파일 업로드">⬆</button>
+  <input type="file" id="file-input" accept=".py,.js,.ts,.tsx,.jsx,.go,.rs,.java,.rb,.md,.txt,.yml,.yaml,.json" style="display:none;">
+  <button class="req-btn-primary" id="code-btn" style="background:var(--bash); border-color:var(--bash);">분석</button>
+  <span class="req-status" id="code-status"></span>
+</div>
+
+<!-- ★ NEW: Repo 전체 시각화 (로컬 디렉토리 OR GitHub URL) -->
+<div class="req-bar">
+  <span style="color:var(--accent); font-size:14px;">🗂</span>
+  <input type="text" id="repo-input" placeholder="로컬 디렉토리 OR GitHub URL — 📁 또는 ★ 즐겨찾기">
+  <button class="key-btn" id="repo-picker-btn" type="button" title="디렉토리 탐색">📁</button>
+  <button class="key-btn" id="repo-recent-btn" type="button" title="최근 사용">★</button>
+  <button class="req-btn-primary" id="repo-btn" style="background:var(--accent); border-color:var(--accent);">Repo 시각화</button>
+  <span class="req-status" id="repo-status"></span>
+</div>
+
+<!-- ★ NEW: 파일 Watcher (저장 시 자동) -->
+<div class="req-bar">
+  <span style="color:var(--user); font-size:14px;">🔄</span>
+  <input type="text" id="watch-input" placeholder="watch 할 디렉토리 — 📁 로 선택">
+  <button class="key-btn" id="watch-picker-btn" type="button" title="디렉토리 탐색">📁</button>
+  <button class="key-btn" id="watch-recent-btn" type="button" title="최근 사용">★</button>
+  <button class="key-btn" id="watch-start-btn" style="border-color:var(--user); color:var(--user);">시작</button>
+  <button class="key-btn" id="watch-stop-btn" style="border-color:var(--danger); color:var(--danger);">중지</button>
+  <span class="req-status" id="watch-status"></span>
+</div>
+
+<!-- 디렉토리 picker (Repo/Watch 공용) -->
+<div class="modal-backdrop" id="dir-picker-modal">
+  <div class="modal" style="width:min(680px, 95vw); display:flex; flex-direction:column;">
+    <h2 id="dir-picker-title">📁 디렉토리 선택</h2>
+    <div class="modal-current" id="dir-picker-path" style="cursor:text;">~</div>
+    <div id="dir-picker-list" style="overflow:auto; min-height:300px; max-height:55vh; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:6px;"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="dir-picker-cancel">닫기</button>
+      <button class="modal-btn primary" id="dir-picker-select">이 폴더 선택</button>
+    </div>
+  </div>
+</div>
+
+<!-- 최근 경로 드롭다운 (Repo/Watch 공용) -->
+<div class="modal-backdrop" id="recent-modal">
+  <div class="modal" style="width:min(580px, 95vw);">
+    <h2>★ 최근 사용 경로</h2>
+    <div id="recent-list" style="max-height:50vh; overflow:auto; margin-top:10px;"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="recent-clear">전체 삭제</button>
+      <button class="modal-btn" id="recent-cancel">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 파일 picker 모달 -->
+<div class="modal-backdrop" id="picker-modal">
+  <div class="modal" style="width:min(680px, 95vw); display:flex; flex-direction:column;">
+    <h2>📁 파일 탐색</h2>
+    <div class="modal-current" id="picker-path" style="cursor:text;">/</div>
+    <div id="picker-list" style="overflow:auto; min-height:300px; max-height:55vh; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:6px;"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="document.getElementById('picker-modal').classList.remove('open')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<main id="timeline">
+  <div class="empty" id="empty">
+    <h2>viz-core</h2>
+    <p>AI 출력을 시각으로 변환하는 R&D 레이어.<br>
+       Claude Code 작업이 발생하면 여기에 자동 시각화.<br>
+       또는 위 입력 박스에 직접 요청.</p>
+  </div>
+</main>
+
+<div class="modal-backdrop" id="key-modal">
+  <div class="modal">
+    <h2>⚙️ ANTHROPIC API 키</h2>
+    <div class="sub"><code>viz-core/.local_key.txt</code> 에 저장.<br>키 발급: <span style="color:var(--accent);">console.anthropic.com/settings/keys</span></div>
+    <div class="modal-current" id="modal-current">현재: 확인 중…</div>
+    <label for="key-input">새 키 (sk-ant-...)</label>
+    <input type="password" id="key-input" placeholder="sk-ant-api03-..." autocomplete="off">
+    <div class="modal-status" id="modal-status"></div>
+    <div class="modal-actions">
+      <button class="modal-btn danger" id="key-delete">삭제</button>
+      <button class="modal-btn" id="key-cancel">닫기</button>
+      <button class="modal-btn" id="key-test">테스트</button>
+      <button class="modal-btn primary" id="key-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOOL_META = {
+  Read: { icon: "📖", cls: "read", verb: "파일 읽는 중" },
+  Edit: { icon: "✏️", cls: "edit", verb: "파일 수정 중" },
+  Write: { icon: "📝", cls: "write", verb: "파일 작성 중" },
+  NotebookEdit: { icon: "📝", cls: "edit", verb: "노트북 편집" },
+  Bash: { icon: "⚡", cls: "bash", verb: "명령 실행 중" },
+  Grep: { icon: "🔍", cls: "search", verb: "텍스트 검색" },
+  Glob: { icon: "🔍", cls: "search", verb: "파일 검색" },
+  Agent: { icon: "🤖", cls: "agent", verb: "서브에이전트" },
+  Task: { icon: "🤖", cls: "agent", verb: "서브에이전트" },
+  WebFetch: { icon: "🌐", cls: "search", verb: "웹 페이지" },
+  WebSearch: { icon: "🌐", cls: "search", verb: "웹 검색" },
+  Skill: { icon: "🧩", cls: "", verb: "스킬 실행" },
+  AskUserQuestion: { icon: "❓", cls: "askq", verb: "사용자에게 질문" },
+};
+
+const AGENT_COLORS = {
+  claude: { color: "#58a6ff", icon: "🔵", name: "Claude" },
+  si: { color: "#3fb950", icon: "🟢", name: "SI" },
+  qa: { color: "#d29922", icon: "🟡", name: "QA" },
+  ops: { color: "#f78166", icon: "🟠", name: "OPS" },
+  adr: { color: "#a371f7", icon: "🟣", name: "ADR" },
+  doc: { color: "#db61a2", icon: "🩷", name: "DOC" },
+};
+function agentMeta(id) { return AGENT_COLORS[(id || "claude").toLowerCase()] || AGENT_COLORS.claude; }
+
+const sessions = new Map();
+function hashHue(s) { let h = 0; for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; } return Math.abs(h) % 360; }
+function sessionFor(sid) {
+  if (!sid) return null;
+  if (!sessions.has(sid)) sessions.set(sid, { hue: hashHue(sid), shortId: sid.length > 8 ? sid.slice(0, 8) : sid, lastSeen: Date.now(), count: 0 });
+  const s = sessions.get(sid);
+  s.lastSeen = Date.now();
+  s.count++;
+  return s;
+}
+
+const tl = document.getElementById("timeline");
+const empty = document.getElementById("empty");
+const statusEl = document.getElementById("status");
+const statusText = document.getElementById("status-text");
+const statEvents = document.getElementById("stat-events");
+const llmBadge = document.getElementById("llm-badge");
+const nowBox = document.getElementById("now-box");
+const nowText = document.getElementById("now-text");
+const nowSub = document.getElementById("now-sub");
+let count = 0, idleTimer = null, nowIdleTimer = null;
+
+function setActive() {
+  statusEl.className = "status active";
+  statusText.textContent = "작업 중";
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => { statusEl.className = "status idle"; statusText.textContent = "대기 중"; }, 4000);
+}
+function setError(msg) { statusEl.className = "status error"; statusText.textContent = msg; }
+function fmtTime(iso) { return iso.slice(11, 19); }
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+function shorten(s, n) { s = String(s ?? ""); return s.length <= n ? s : s.slice(0, n - 1) + "…"; }
+
+function updateNow(ev) {
+  const d = ev.data || {};
+  const name = d.hook_event_name || "";
+  if (name.startsWith("_")) return;
+  let label = "", sub = "", idle = false;
+  if (name === "Stop") { label = "✓ 응답 완료"; idle = true; }
+  else if (name === "SubagentStop") { label = "🤖 서브에이전트 완료"; idle = true; }
+  else if (name === "Notification") { label = "🔔 입력 대기"; sub = d.message || ""; }
+  else if (name === "UserPromptSubmit") { label = "💬 사용자 메시지"; sub = shorten(d.prompt, 100); }
+  else if (name === "PostToolUse") {
+    const tn = d.tool_name || ""; const inp = d.tool_input || {};
+    const meta = TOOL_META[tn] || { icon: "🔧", verb: tn };
+    label = `${meta.icon} ${meta.verb}`;
+    if (tn === "Bash") sub = (inp.command || "").slice(0, 120);
+    else if (["Read", "Edit", "Write", "NotebookEdit"].includes(tn)) sub = inp.file_path || "";
+    else if (tn === "Grep" || tn === "Glob") sub = inp.pattern || "";
+    else if (tn === "Agent" || tn === "Task") sub = inp.description || "";
+    else if (tn === "AskUserQuestion") { const qs = inp.questions || []; sub = qs.length ? shorten(qs[0].question, 100) : ""; }
+  } else return;
+  nowText.textContent = label;
+  nowSub.textContent = sub || "";
+  nowBox.className = idle ? "now-box idle" : "now-box";
+  clearTimeout(nowIdleTimer);
+  if (!idle) nowIdleTimer = setTimeout(() => { nowText.textContent = "대기 중"; nowSub.textContent = ""; nowBox.className = "now-box idle"; }, 8000);
+}
+
+// ── 11종 viz_kind 렌더러 (전부 유지) ──
+function renderVizDiff(d) {
+  return `${d.file ? `<div class="viz-diff-file">📄 ${esc(d.file)}</div>` : ""}
+    <div class="viz-diff-panel">
+      <div class="viz-diff-side before"><div class="viz-diff-label">- BEFORE</div><div>${esc(d.before || "")}</div></div>
+      <div class="viz-diff-side after"><div class="viz-diff-label">+ AFTER</div><div>${esc(d.after || "")}</div></div>
+    </div>`;
+}
+function renderVizGauge(d) {
+  const v = Number(d.value || 0), m = Number(d.max || 100);
+  const pct = m > 0 ? Math.min(100, (v / m) * 100) : 0;
+  return `<div class="viz-gauge"><div class="viz-gauge-label">${esc(d.label || "")}</div>
+    <div class="viz-gauge-value">${esc(String(v))}<span class="viz-gauge-unit"> / ${esc(String(m))} ${esc(d.unit || "")}</span></div>
+    <div class="viz-gauge-bar"><div class="viz-gauge-fill" style="width:${pct}%"></div></div></div>`;
+}
+function renderVizTable(d) {
+  const ths = (d.headers || []).map(h => `<th>${esc(h)}</th>`).join("");
+  const trs = (d.rows || []).map(r => `<tr>${(r || []).map(c => `<td>${esc(c)}</td>`).join("")}</tr>`).join("");
+  return `<div class="viz-table-wrap"><table class="viz-table">${ths ? `<thead><tr>${ths}</tr></thead>` : ""}<tbody>${trs}</tbody></table></div>`;
+}
+function renderVizFlow(d) {
+  const parts = [];
+  (d.steps || []).forEach((s, i) => {
+    const st = s.status || "todo";
+    const icon = st === "done" ? "✓" : st === "now" ? "▶" : "○";
+    parts.push(`<div class="viz-flow-step ${esc(st)}">${icon} ${esc(s.name || "")}</div>`);
+    if (i < (d.steps || []).length - 1) parts.push(`<span class="viz-flow-arrow">→</span>`);
+  });
+  return `<div class="viz-flow">${parts.join("")}</div>`;
+}
+function renderVizBadge(d) { return `<span class="viz-badge ${esc(d.tone || "info")}">${esc(d.label || "")}</span>`; }
+function renderVizCode(d) {
+  return `<div class="viz-code-wrap">${d.lang ? `<div class="viz-code-lang">${esc(d.lang)}</div>` : ""}<pre class="viz-code-block">${esc(d.code || "")}</pre></div>`;
+}
+function renderVizAnimation(d) {
+  const nodes = d.nodes || [], flow = d.flow || [], duration = Number(d.duration_ms || 3000);
+  if (nodes.length < 2 || flow.length < 2) return `<div style="color:var(--muted);font-size:11px;">데이터 부족</div>`;
+
+  // 노드 위치: flow 안에 있는 것만 그 순서로, 그 외는 아래 줄에 보조
+  const inFlow = new Set(flow);
+  const flowNodes = flow.map(id => nodes.find(n => n.id === id)).filter(Boolean);
+  const extraNodes = nodes.filter(n => !inFlow.has(n.id));
+
+  // 동적 크기: 노드 개수에 따라 가로 늘림
+  const nodeW = 160;  // 노드 + 라벨 공간
+  const w = Math.max(700, Math.max(flowNodes.length, extraNodes.length) * nodeW + 80);
+  const rowH = 90;
+  const h = (extraNodes.length > 0 ? rowH * 2 + 40 : rowH + 60);
+
+  const nodeMap = {};
+  flowNodes.forEach((n, i) => {
+    const x = 60 + i * ((w - 120) / Math.max(1, flowNodes.length - 1));
+    nodeMap[n.id] = { x, y: 50, label: n.label || n.id, inFlow: true };
+  });
+  extraNodes.forEach((n, i) => {
+    const x = 60 + i * ((w - 120) / Math.max(1, extraNodes.length - 1));
+    nodeMap[n.id] = { x, y: 50 + rowH + 40, label: n.label || n.id, inFlow: false };
+  });
+
+  // 노드: 더 큰 원 + 라벨을 아래에 (자르지 않음)
+  const circles = Object.entries(nodeMap).map(([id, n]) => {
+    const color = n.inFlow ? "var(--accent)" : "var(--dim)";
+    return `<g>
+      <circle cx="${n.x}" cy="${n.y}" r="24" fill="var(--bg)" stroke="${color}" stroke-width="2.5"/>
+      <circle cx="${n.x}" cy="${n.y}" r="6" fill="${color}" opacity="0.5"/>
+      <text x="${n.x}" y="${n.y + 44}" text-anchor="middle" fill="var(--text)" font-size="11" font-family="ui-monospace,monospace" font-weight="600">${esc(n.label)}</text>
+    </g>`;
+  }).join("");
+
+  // 화살표 marker 정의
+  const defs = `<defs>
+    <marker id="arrow-${Math.random().toString(36).slice(2,6)}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)" />
+    </marker>
+  </defs>`;
+  const arrowId = `arrow-${Math.random().toString(36).slice(2,6)}`;
+  const defsTagged = `<defs><marker id="${arrowId}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)" /></marker></defs>`;
+
+  // flow 화살표 + 점 애니메이션
+  const edges = []; const particles = [];
+  for (let i = 0; i < flow.length - 1; i++) {
+    const from = nodeMap[flow[i]], to = nodeMap[flow[i + 1]];
+    if (!from || !to) continue;
+    const pid = `p${Math.random().toString(36).slice(2, 8)}`;
+    // path 가 노드 외곽에서 시작/끝 (반지름 24 만큼 안쪽으로)
+    const dx = to.x - from.x, dy = to.y - from.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const ux = dx/len, uy = dy/len;
+    const x1 = from.x + ux*26, y1 = from.y + uy*26;
+    const x2 = to.x - ux*26, y2 = to.y - uy*26;
+    edges.push(`<path id="${pid}" d="M${x1},${y1} L${x2},${y2}" stroke="var(--accent)" stroke-width="2" fill="none" opacity="0.5" marker-end="url(#${arrowId})"/>`);
+    particles.push(`<circle r="7" fill="var(--bash)" filter="drop-shadow(0 0 8px var(--bash))">
+      <animateMotion dur="${duration}ms" begin="${(duration * i) / Math.max(1, flow.length - 1)}ms" repeatCount="indefinite">
+        <mpath href="#${pid}"/></animateMotion></circle>`);
+  }
+  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" style="background:var(--bg); border-radius:6px;">
+    ${defsTagged}
+    ${edges.join("")}
+    ${circles}
+    ${particles.join("")}
+  </svg>
+  <div style="font-size:11px; color:var(--dim); margin-top:6px; text-align:center;">
+    ${flowNodes.length}단계 호출 흐름${extraNodes.length > 0 ? ` (+ ${extraNodes.length}개 보조)` : ""}
+  </div>`;
+}
+function renderVizKpi(d) {
+  const kpis = d.kpis || [];
+  if (!kpis.length) return `<div style="color:var(--muted);font-size:11px;">KPI 없음</div>`;
+  const cards = kpis.map(k => {
+    const t = k.trend || "flat", ti = t === "up" ? "▲" : t === "down" ? "▼" : "━";
+    const tc = t === "up" ? "var(--bash)" : t === "down" ? "var(--danger)" : "var(--muted)";
+    return `<div style="background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:10px 12px;">
+      <div style="font-size:11px; color:var(--muted);">${esc(k.label || "")}</div>
+      <div style="font-size:20px; font-weight:700; color:var(--text); font-family:ui-monospace,monospace;">${esc(k.value || "")}</div>
+      <div style="font-size:11px; color:${tc};">${ti} ${esc(k.delta || "")}</div></div>`;
+  }).join("");
+  return `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:8px;">${cards}</div>`;
+}
+function renderVizJourney(d) {
+  const stages = d.stages || [];
+  if (!stages.length) return `<div style="color:var(--muted);font-size:11px;">여정 없음</div>`;
+  const blocks = stages.map((s, i) => {
+    const drop = Number(s.drop || 0);
+    const dc = drop > 20 ? "var(--danger)" : drop > 5 ? "var(--user)" : "var(--bash)";
+    return `<div style="background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:10px; min-width:90px; text-align:center; flex:1;">
+      <div style="font-size:18px;">${esc(s.icon || "○")}</div>
+      <div style="font-size:11.5px; color:var(--text); font-weight:600; margin-top:4px;">${esc(s.name || "")}</div>
+      ${drop > 0 ? `<div style="font-size:10px; color:${dc}; margin-top:3px;">↓ ${drop}%</div>` : ""}
+    </div>` + (i < stages.length - 1 ? `<div style="color:var(--dim); align-self:center;">→</div>` : "");
+  }).join("");
+  return `<div style="font-size:11px; color:var(--muted); margin-bottom:8px;">👤 ${esc(d.persona || "사용자")}</div>
+    <div style="display:flex; gap:4px; align-items:stretch; flex-wrap:wrap;">${blocks}</div>`;
+}
+function renderVizArch(d) {
+  const layers = d.layers || [], active = d.active_layer || "";
+  if (!layers.length) return `<div style="color:var(--muted);font-size:11px;">아키텍처 없음</div>`;
+  return layers.map(L => {
+    const isA = L.name === active;
+    const cs = (L.components || []).map(c => `<span style="display:inline-block; background:var(--panel); padding:2px 8px; border-radius:4px; font-size:11px; margin:2px;">${esc(c)}</span>`).join("");
+    return `<div style="background:var(--bg); border:1px solid ${isA ? 'var(--accent)' : 'var(--border)'}; border-radius:6px; padding:8px 12px;">
+      <div style="font-size:10px; color:var(--muted); text-transform:uppercase; margin-bottom:5px;">▓ ${esc(L.name)}${isA ? ' ⚡' : ''}</div>
+      <div>${cs}</div></div>`;
+  }).join('<div style="text-align:center; color:var(--dim); padding:2px 0;">▼</div>');
+}
+function renderVizWhatif(d) {
+  const renderSide = (items, isAfter) => items.map(it => {
+    const ch = it.change || "neutral";
+    const c = ch === "good" ? "var(--bash)" : ch === "bad" ? "var(--danger)" : "var(--muted)";
+    const sg = isAfter ? (ch === "good" ? "✓ " : ch === "bad" ? "⚠️ " : "") : "";
+    return `<div style="padding:4px 0; border-bottom:1px solid var(--border);"><span style="color:var(--muted); font-size:11px;">${esc(it.k || "")}</span> <span style="color:${c}; font-weight:600;">${sg}${esc(it.v || "")}</span></div>`;
+  }).join("");
+  const rec = d.recommendation ? `<div style="margin-top:10px; padding:8px 10px; background:rgba(88,166,255,0.08); border:1px solid var(--accent); border-radius:6px; color:var(--accent); font-size:12px;">💡 ${esc(d.recommendation)}</div>` : "";
+  return `${d.title ? `<div style="font-weight:600; margin-bottom:8px;">${esc(d.title)}</div>` : ""}
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div><div style="font-size:10px; color:var(--muted); text-transform:uppercase; margin-bottom:4px;">현재</div>${renderSide(d.current || [], false)}</div>
+      <div><div style="font-size:10px; color:var(--accent); text-transform:uppercase; margin-bottom:4px;">변경 후</div>${renderSide(d.after || [], true)}</div>
+    </div>${rec}`;
+}
+
+// ★ Entry point 별 sub-graph 렌더 (callgraph 새 모드)
+function renderEntryGraphs(entries, nodes, edges) {
+  if (!entries || entries.length === 0) return null;
+
+  const ENTRY_ICONS = {
+    http_get: "🟢 GET", http_post: "🔵 POST", http_put: "🟡 PUT",
+    http_delete: "🔴 DEL", http_patch: "🟣 PATCH",
+    websocket: "🔌 WS", lifecycle: "⚡ Lifecycle",
+    cli: "💻 CLI", main: "▶ main", task: "⏱ Task", route: "🛤 Route",
+  };
+
+  const sectionsHtml = entries.slice(0, 6).map((ep, idx) => {
+    if (!ep.chain || ep.chain.length === 0) {
+      return `<div style="margin-bottom:8px;"><b>${ENTRY_ICONS[ep.kind] || ep.kind}</b> <code>${esc(ep.entry)}</code> <span style="color:var(--muted);">(호출 체인 없음)</span></div>`;
+    }
+    // chain 노드들을 가로 sequence 로
+    const chainBoxes = ep.chain.slice(0, 8).map((fname, i) =>
+      `<span style="display:inline-block; background:var(--bg); border:1px solid var(--border); border-radius:5px; padding:3px 8px; font-family:ui-monospace,monospace; font-size:11px; margin:2px;">${esc(fname)}</span>${i < Math.min(ep.chain.length - 1, 7) ? '<span style="color:var(--dim); margin:0 2px;">→</span>' : ''}`
+    ).join("");
+    return `<div style="margin-bottom:12px; padding:8px 10px; background:var(--bg); border-left:3px solid var(--accent); border-radius:5px;">
+      <div style="font-size:12px; color:var(--accent); margin-bottom:4px;">
+        <b>${ENTRY_ICONS[ep.kind] || ep.kind}</b> <code style="color:var(--text);">${esc(ep.entry)}</code>
+        <span style="color:var(--muted); font-size:11px;">(line ${ep.line}, depth ${ep.depth})</span>
+      </div>
+      <div>${chainBoxes}</div>
+    </div>`;
+  }).join("");
+
+  return `<div style="margin-top:10px;">
+    <div style="font-size:11px; color:var(--accent); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:8px; font-weight:700;">▶ Entry Points (${entries.length})</div>
+    ${sectionsHtml}
+  </div>`;
+}
+
+// ★ callgraph — 진짜 그래프 (계층 배치 + 모든 edges + 점이 모든 화살표 동시 흐름)
+function renderVizCallgraph(d) {
+  const nodes = d.nodes || [], edges = d.edges || [], duration = Number(d.duration_ms || 4000);
+  if (nodes.length < 2 || edges.length < 1) return `<div style="color:var(--muted);font-size:11px;">데이터 부족</div>`;
+
+  // 계층 배치: in-degree=0 → 1층, 그 자식 → 2층, ...
+  // 위상정렬 기반 layer 계산
+  const inEdges = {}, outEdges = {};
+  nodes.forEach(n => { inEdges[n.id] = []; outEdges[n.id] = []; });
+  edges.forEach(e => {
+    if (inEdges[e.to]) inEdges[e.to].push(e.from);
+    if (outEdges[e.from]) outEdges[e.from].push(e.to);
+  });
+
+  const layer = {};
+  // BFS: in-degree 0 노드부터 시작
+  const roots = nodes.filter(n => (n.in_degree || 0) === 0).map(n => n.id);
+  if (roots.length === 0) roots.push(nodes[0].id);
+  const queue = roots.map(id => ({id, lvl: 0}));
+  const visited = new Set();
+  while (queue.length) {
+    const {id, lvl} = queue.shift();
+    if (visited.has(id)) {
+      if (layer[id] < lvl) layer[id] = lvl;
+      continue;
+    }
+    visited.add(id);
+    layer[id] = lvl;
+    (outEdges[id] || []).forEach(child => queue.push({id: child, lvl: lvl + 1}));
+  }
+  nodes.forEach(n => { if (layer[n.id] === undefined) layer[n.id] = 0; });
+
+  // 각 layer 안 노드들 정렬
+  const layers = {};
+  nodes.forEach(n => {
+    const L = layer[n.id];
+    if (!layers[L]) layers[L] = [];
+    layers[L].push(n);
+  });
+  const layerKeys = Object.keys(layers).sort((a, b) => Number(a) - Number(b));
+
+  // SVG 크기 계산
+  const colW = 180, rowH = 90;
+  const maxNodesInLayer = Math.max(...Object.values(layers).map(L => L.length));
+  const w = Math.max(700, layerKeys.length * colW + 100);
+  const h = Math.max(220, maxNodesInLayer * rowH + 60);
+
+  // 좌표 매핑
+  const pos = {};
+  layerKeys.forEach((L, i) => {
+    const x = 60 + i * ((w - 120) / Math.max(1, layerKeys.length - 1));
+    const nodesInLayer = layers[L];
+    nodesInLayer.forEach((n, j) => {
+      const yStep = (h - 60) / Math.max(1, nodesInLayer.length);
+      const y = 30 + j * yStep + yStep / 2;
+      pos[n.id] = {x, y, ...n};
+    });
+  });
+
+  // 노드 크기 (호출 빈도 기반)
+  const maxDeg = Math.max(1, ...nodes.map(n => (n.in_degree || 0) + (n.out_degree || 0)));
+
+  // 화살표 marker
+  const arrowId = `cg-arr-${Math.random().toString(36).slice(2,6)}`;
+  const defs = `<defs><marker id="${arrowId}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)" opacity="0.6"/></marker></defs>`;
+
+  // edges + 점
+  const edgeSvg = [];
+  const particleSvg = [];
+  edges.forEach((e, i) => {
+    const a = pos[e.from], b = pos[e.to];
+    if (!a || !b) return;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    if (len === 0) return;
+    const ux = dx/len, uy = dy/len;
+    const r = 22 + Math.min(8, ((a.in_degree || 0) + (a.out_degree || 0)) / maxDeg * 8);
+    const r2 = 22 + Math.min(8, ((b.in_degree || 0) + (b.out_degree || 0)) / maxDeg * 8);
+    const x1 = a.x + ux*r, y1 = a.y + uy*r;
+    const x2 = b.x - ux*r2, y2 = b.y - uy*r2;
+    const pid = `cgp-${i}-${Math.random().toString(36).slice(2,5)}`;
+    edgeSvg.push(`<path id="${pid}" d="M${x1},${y1} L${x2},${y2}" stroke="var(--accent)" stroke-width="1.5" fill="none" opacity="0.4" marker-end="url(#${arrowId})"/>`);
+    // 점 (각 edge 마다 동시 흐름)
+    const delay = (i * (duration / edges.length)) % duration;
+    particleSvg.push(`<circle r="5" fill="var(--bash)" filter="drop-shadow(0 0 6px var(--bash))">
+      <animateMotion dur="${duration}ms" begin="${delay}ms" repeatCount="indefinite">
+        <mpath href="#${pid}"/></animateMotion></circle>`);
+  });
+
+  // 노드
+  const circles = nodes.map(n => {
+    const p = pos[n.id];
+    if (!p) return "";
+    const deg = (n.in_degree || 0) + (n.out_degree || 0);
+    const r = 22 + Math.min(8, (deg / maxDeg) * 8);
+    const heavy = deg >= maxDeg * 0.7;
+    const strokeColor = heavy ? "var(--bash)" : "var(--accent)";
+    return `<g>
+      <circle cx="${p.x}" cy="${p.y}" r="${r}" fill="var(--bg)" stroke="${strokeColor}" stroke-width="2.5"/>
+      <text x="${p.x}" y="${p.y + 4}" text-anchor="middle" fill="var(--muted)" font-size="9" font-family="ui-monospace,monospace">${deg}</text>
+      <text x="${p.x}" y="${p.y + r + 14}" text-anchor="middle" fill="var(--text)" font-size="10.5" font-family="ui-monospace,monospace" font-weight="600">${esc(n.label)}</text>
+    </g>`;
+  }).join("");
+
+  // ★ Entry point 별 sub-graph
+  const entryHtml = renderEntryGraphs(d.entries, nodes, edges) || "";
+
+  // entry point 인 노드는 둘레에 강조 표시 (data.nodes 의 entry_kind)
+  const entryNodeIds = new Set(nodes.filter(n => n.entry_kind).map(n => n.id));
+  const entryCirclesOverlay = nodes.filter(n => entryNodeIds.has(n.id)).map(n => {
+    const p = pos[n.id]; if (!p) return "";
+    const deg = (n.in_degree || 0) + (n.out_degree || 0);
+    const r = 22 + Math.min(8, (deg / maxDeg) * 8);
+    return `<circle cx="${p.x}" cy="${p.y}" r="${r + 4}" fill="none" stroke="var(--user)" stroke-width="1.5" stroke-dasharray="3,2"/>`;
+  }).join("");
+
+  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" style="background:var(--bg); border-radius:6px;">
+    ${defs}${edgeSvg.join("")}${entryCirclesOverlay}${circles}${particleSvg.join("")}
+  </svg>
+  <div style="font-size:11px; color:var(--dim); margin-top:6px; text-align:center;">
+    ${nodes.length} 노드 · ${edges.length} 호출 · ${layerKeys.length} 계층 · <span style="color:var(--user);">⚪ 점선 = entry point</span>
+  </div>
+  ${entryHtml}`;
+}
+
+const VIZ_RENDERERS = {
+  diff: renderVizDiff, gauge: renderVizGauge, table: renderVizTable,
+  flow: renderVizFlow, badge: renderVizBadge, code: renderVizCode,
+  animation: renderVizAnimation, kpi: renderVizKpi, journey: renderVizJourney,
+  arch: renderVizArch, whatif: renderVizWhatif,
+  callgraph: renderVizCallgraph,
+};
+
+function renderViz(kind, data) {
+  if (!kind || kind === "none") return "";
+  const r = VIZ_RENDERERS[kind];
+  if (!r) return "";
+  try { return `<div class="viz-container"><div class="viz-kind-label">▶ ${esc(kind)}</div>${r(data || {})}</div>`; }
+  catch (e) { return `<div style="color:var(--danger);font-size:11px;">렌더 실패: ${esc(e.message)}</div>`; }
+}
+
+function makeSummaryNode(ev) {
+  const d = ev.data || {};
+  const node = document.createElement("div");
+  node.className = "node summary";
+  // ★ Drill-down: files_touched 의 각 파일 클릭 가능 (그 파일 깊이 분석)
+  const fh = (d.files_touched || []).map(f => {
+    const isPath = f && (f.startsWith("/") || f.includes("\\") || f.includes("./") || (!f.startsWith("(") && !f.startsWith("http")));
+    return isPath
+      ? `<span class="summary-file drill" data-path="${esc(f)}" title="클릭으로 깊이 분석" style="cursor:pointer;">${esc(f)}</span>`
+      : `<span class="summary-file">${esc(f)}</span>`;
+  }).join("");
+  const tag = d.llm_used ? "LLM" : "규칙";
+  const vk = d.viz_kind || "none";
+  const vh = renderViz(d.viz_kind, d.viz_data);
+  node.innerHTML = `
+    <div class="node-row">
+      <span class="node-ts">${fmtTime(ev.ts)}</span>
+      <span class="node-icon">📝</span>
+      <span class="node-tool">활동 요약</span>
+      <span class="node-detail" style="color:var(--accent);">[${tag}] ${esc(d.reason || "")} · ${esc(vk)}</span>
+    </div>
+    <div class="summary-line">${esc(d.summary || "")}</div>
+    ${d.next_step ? `<div class="summary-next">→ ${esc(d.next_step)}</div>` : ""}
+    ${fh ? `<div class="summary-files">${fh}</div>` : ""}
+    ${vh}
+    <button class="fav-btn" data-sm="${esc((d.summary || '').replace(/"/g, '&quot;'))}" data-vk="${esc(vk)}">⭐ 즐겨찾기</button>
+  `;
+  node.querySelector(".fav-btn").addEventListener("click", async (e) => {
+    e.stopPropagation();
+    const btn = e.currentTarget;
+    try {
+      await fetch("/favorite", { method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({title: btn.dataset.sm, viz_kind: btn.dataset.vk, summary: btn.dataset.sm, data: d.viz_data}) });
+      btn.textContent = "⭐ 저장됨"; btn.style.color = "var(--user)"; btn.disabled = true;
+    } catch (e) {}
+  });
+  // ★ Drill-down: 파일 클릭 → 그 파일 깊이 분석
+  node.querySelectorAll(".summary-file.drill").forEach(el => {
+    el.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const path = el.dataset.path;
+      const orig = el.textContent;
+      el.textContent = "분석 중…";
+      el.style.color = "var(--accent)";
+      try {
+        const r = await fetch("/analyze/code", { method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({path}) });
+        const d2 = await r.json();
+        if (d2.ok) {
+          el.textContent = "✓ " + orig;
+          el.style.color = "var(--bash)";
+        } else {
+          el.textContent = "✗ " + (d2.error || ""); el.style.color = "var(--danger)";
+          setTimeout(() => { el.textContent = orig; el.style.color = ""; }, 3000);
+        }
+      } catch (err) {
+        el.textContent = "✗ 에러";
+        setTimeout(() => { el.textContent = orig; el.style.color = ""; }, 2000);
+      }
+    });
+    el.addEventListener("mouseenter", () => { el.style.borderColor = "var(--accent)"; });
+    el.addEventListener("mouseleave", () => { el.style.borderColor = ""; });
+  });
+  return node;
+}
+
+function renderOptionsBlock(questions) {
+  const wrap = document.createElement("div");
+  questions.forEach(q => {
+    const qBox = document.createElement("div");
+    qBox.className = "askq-question";
+    let html = q.multiSelect ? `<div class="askq-multi">▢ 다중 선택</div>` : "";
+    html += `<div style="font-weight:600;">${esc(q.question || "")}</div>`;
+    if (q.header) html += `<div style="color:var(--muted);font-size:11px;margin-top:2px;">${esc(q.header)}</div>`;
+    qBox.innerHTML = html;
+    const opts = document.createElement("div");
+    opts.className = "askq-options";
+    (q.options || []).forEach((opt, i) => {
+      const rec = /\(추천\)|\(Recommended\)/i.test(opt.label || "");
+      const card = document.createElement("div");
+      card.className = "opt" + (rec ? " recommended" : "");
+      let inner = `<div class="opt-header"><span>${esc(opt.label || ("옵션 " + (i + 1)))}</span>`;
+      if (rec) inner += `<span class="opt-tag">추천</span>`;
+      inner += `</div>`;
+      if (opt.description) inner += `<div class="opt-desc">${esc(opt.description)}</div>`;
+      if (opt.preview) inner += `<pre class="opt-preview">${esc(opt.preview)}</pre>`;
+      card.innerHTML = inner;
+      opts.appendChild(card);
+    });
+    qBox.appendChild(opts);
+    wrap.appendChild(qBox);
+  });
+  return wrap;
+}
+
+function makeNode(ev) {
+  const d = ev.data || {};
+  const name = d.hook_event_name || "unknown";
+  if (name === "PreToolUse") return null;
+  if (name === "_summary") return makeSummaryNode(ev);
+
+  const node = document.createElement("div");
+  node.className = "node";
+  let icon = "·", cls = "", main = name, detail = "", body = "", extra = null;
+
+  if (name === "UserPromptSubmit") {
+    cls = "user"; icon = "💬"; main = "사용자";
+    detail = shorten(d.prompt, 220); body = d.prompt || "";
+  } else if (name === "PostToolUse") {
+    const tn = d.tool_name || "Tool";
+    const meta = TOOL_META[tn] || { icon: "🔧", cls: "" };
+    icon = meta.icon; cls = meta.cls; main = tn;
+    const inp = d.tool_input || {};
+    if (tn === "AskUserQuestion") {
+      const qs = inp.questions || [];
+      detail = qs.length ? `${qs.length}개 질문: ${shorten(qs[0].question, 80)}` : "";
+      extra = renderOptionsBlock(qs);
+      body = JSON.stringify(d, null, 2);
+    } else if (["Read", "Edit", "Write", "NotebookEdit"].includes(tn)) {
+      detail = inp.file_path || ""; body = JSON.stringify(d, null, 2);
+    } else if (tn === "Bash") { detail = shorten(inp.command, 160); body = JSON.stringify(d, null, 2); }
+    else if (tn === "Grep") { detail = `${inp.pattern || ""} ${inp.path ? "in " + inp.path : ""}`.trim(); body = JSON.stringify(d, null, 2); }
+    else { detail = shorten(JSON.stringify(inp), 200); body = JSON.stringify(d, null, 2); }
+  } else if (name === "Stop") { cls = "stop"; icon = "✓"; main = "응답 완료"; }
+  else if (name === "SubagentStop") { cls = "stop"; icon = "🤖✓"; main = "서브에이전트 종료"; }
+  else if (name === "Notification") { cls = "user"; icon = "🔔"; main = "입력 대기"; detail = d.message || ""; }
+  else { main = name; body = JSON.stringify(d, null, 2); }
+
+  if (cls) node.classList.add(cls);
+  node.innerHTML = `<div class="node-row">
+    <span class="node-ts">${fmtTime(ev.ts)}</span>
+    <span class="node-icon">${icon}</span>
+    <span class="node-tool">${esc(main)}</span>
+    <span class="node-detail">${esc(detail)}</span>
+  </div>`;
+  if (extra) node.appendChild(extra);
+  if (body) {
+    node.classList.add("expandable");
+    const b = document.createElement("pre");
+    b.className = "node-body";
+    b.textContent = body;
+    node.appendChild(b);
+    node.addEventListener("click", (e) => {
+      if (e.target.closest(".opt") || e.target.closest(".askq-question") || e.target.closest(".viz-container") || e.target.closest(".fav-btn")) return;
+      node.classList.toggle("open");
+    });
+  }
+  return node;
+}
+
+function getOrCreateSessionBox(sid, agentId) {
+  if (!sid) sid = "_orphan";
+  let box = document.querySelector(`.session-group[data-sid="${CSS.escape(sid)}"]`);
+  if (box) return box;
+  const sMeta = sid !== "_orphan" ? sessions.get(sid) : null;
+  const aMeta = agentMeta(agentId);
+  const color = aMeta.color;
+  box = document.createElement("div");
+  box.className = "session-group";
+  box.dataset.sid = sid;
+  box.style.setProperty("--sgcolor", color);
+  const header = document.createElement("div");
+  header.className = "sg-header";
+  const shortId = sMeta ? sMeta.shortId : (sid === "_orphan" ? "세션 없음" : sid.slice(0, 8));
+  header.innerHTML = `<span class="sdot" style="background:${color}"></span>
+    <span class="sg-id">${aMeta.icon} ${esc(aMeta.name)}</span>
+    <span style="color:var(--dim); font-size:11px;">${esc(shortId)}</span>
+    <span class="sg-meta" data-role="meta" style="margin-left:auto;">시작…</span>`;
+  box.appendChild(header);
+  const nodes = document.createElement("div");
+  nodes.className = "sg-nodes";
+  box.appendChild(nodes);
+  return box;
+}
+
+function appendNodeToSession(box, node) {
+  const c = box.querySelector(".sg-nodes");
+  if (c.children.length > 0) {
+    const conn = document.createElement("div");
+    conn.className = "node-conn";
+    c.appendChild(conn);
+  }
+  c.appendChild(node);
+  const meta = box.querySelector("[data-role=meta]");
+  if (meta) meta.textContent = `${c.querySelectorAll(".node").length}개`;
+}
+
+function bumpBoxToTop(box) {
+  if (tl.firstChild === box) return;
+  if (box.parentNode === tl) tl.removeChild(box);
+  if (empty.parentNode) empty.remove();
+  tl.insertBefore(box, tl.firstChild);
+}
+
+function add(ev) {
+  const sid = (ev.data?.session_id) || "_orphan";
+  const agentId = ev.data?.agent_id || "claude";
+  sessionFor(sid);
+  const node = makeNode(ev);
+  if (!node) return;
+  const box = getOrCreateSessionBox(sid, agentId);
+  appendNodeToSession(box, node);
+  bumpBoxToTop(box);
+  node._evData = ev;  // 우클릭 클립보드용
+  count++;
+  statEvents.textContent = `${count} events`;
+  setActive();
+  if (!(ev.data?.hook_event_name || "").startsWith("_")) updateNow(ev);
+}
+
+// 우클릭 → 클립보드
+document.addEventListener("contextmenu", async (e) => {
+  const node = e.target.closest(".node");
+  if (!node || !node._evData) return;
+  e.preventDefault();
+  const text = `[VIZ 노드]\n${JSON.stringify(node._evData, null, 2)}\n\n위 컨텍스트에 대해 설명/분석해줘.`;
+  try {
+    await navigator.clipboard.writeText(text);
+    node.style.outline = "2px solid var(--bash)";
+    setTimeout(() => { node.style.outline = ""; }, 400);
+    showToast("✓ 클립보드 복사 — Claude 채팅에 붙여넣기");
+  } catch (err) {}
+});
+
+function showToast(msg) {
+  const t = document.createElement("div");
+  t.textContent = msg;
+  t.style.cssText = `position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--bash); color:#fff; padding:10px 18px; border-radius:8px; font-size:12px; z-index:300; box-shadow:0 4px 12px rgba(0,0,0,0.4);`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+async function refreshHealthz() {
+  try {
+    const r = await fetch("/healthz");
+    const d = await r.json();
+    llmBadge.className = d.llm_enabled ? "llm-badge llm-on" : "llm-badge llm-off";
+    llmBadge.textContent = d.llm_enabled ? "LLM ON" : "LLM OFF";
+  } catch (_) {}
+}
+refreshHealthz();
+setInterval(refreshHealthz, 5000);
+
+// 키 모달
+const keyModal = document.getElementById("key-modal");
+const keyInput = document.getElementById("key-input");
+const keyStatus = document.getElementById("modal-status");
+const keyCurrent = document.getElementById("modal-current");
+function showKS(msg, ok) { keyStatus.textContent = msg; keyStatus.className = "modal-status show " + (ok ? "ok" : "err"); }
+async function loadKS() {
+  try {
+    const r = await fetch("/key/status"); const d = await r.json();
+    keyCurrent.innerHTML = d.configured ? `현재: <span style="color:var(--bash);">${esc(d.preview)}</span> (${d.length}자)` : `현재: <span style="color:var(--muted);">미설정</span>`;
+  } catch (e) {}
+}
+document.getElementById("key-btn").addEventListener("click", async () => {
+  keyStatus.className = "modal-status"; keyInput.value = "";
+  await loadKS();
+  keyModal.classList.add("open");
+  setTimeout(() => keyInput.focus(), 50);
+});
+document.getElementById("key-cancel").addEventListener("click", () => keyModal.classList.remove("open"));
+keyModal.addEventListener("click", (e) => { if (e.target === keyModal) keyModal.classList.remove("open"); });
+document.getElementById("key-save").addEventListener("click", async () => {
+  const k = keyInput.value.trim();
+  if (!k.startsWith("sk-ant-")) { showKS("sk-ant-로 시작해야 함", false); return; }
+  const r = await fetch("/key", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({key: k}) });
+  const d = await r.json();
+  if (!d.ok) { showKS(d.error || "실패", false); return; }
+  showKS("저장됨", true);
+  await refreshHealthz(); await loadKS();
+  keyInput.value = "";
+});
+document.getElementById("key-test").addEventListener("click", async () => {
+  const tr = await fetch("/key/test", { method: "POST" });
+  const td = await tr.json();
+  showKS(td.ok ? "✓ 키 작동" : "테스트 실패", td.ok);
+});
+document.getElementById("key-delete").addEventListener("click", async () => {
+  if (!confirm("키 삭제?")) return;
+  await fetch("/key", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({key: ""}) });
+  await refreshHealthz(); await loadKS();
+  showKS("삭제됨", true);
+});
+
+// 자연어 요청
+const reqInput = document.getElementById("req-input");
+const reqBtn = document.getElementById("req-btn");
+const reqStatus = document.getElementById("req-status");
+async function sendReq() {
+  const req = reqInput.value.trim(); if (!req) return;
+  reqStatus.textContent = "…"; reqStatus.style.color = "var(--accent)";
+  reqBtn.disabled = true;
+  try {
+    const r = await fetch("/viz/request", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({request: req}) });
+    const d = await r.json();
+    if (d.ok) { reqStatus.textContent = "✓"; reqStatus.style.color = "var(--bash)"; reqInput.value = ""; }
+    else { reqStatus.textContent = "✗ " + (d.error || ""); reqStatus.style.color = "var(--danger)"; }
+  } catch (e) { reqStatus.textContent = "✗"; reqStatus.style.color = "var(--danger)"; }
+  finally { reqBtn.disabled = false; setTimeout(() => { reqStatus.textContent = ""; }, 3000); }
+}
+reqBtn.addEventListener("click", sendReq);
+reqInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendReq(); });
+
+// ★ Python 코드 분석
+const codeInput = document.getElementById("code-input");
+const codeBtn = document.getElementById("code-btn");
+const codeStatus = document.getElementById("code-status");
+async function sendCode() {
+  const path = codeInput.value.trim(); if (!path) return;
+  codeStatus.textContent = "…"; codeStatus.style.color = "var(--bash)";
+  codeBtn.disabled = true;
+  try {
+    const r = await fetch("/analyze/code", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({path}) });
+    const d = await r.json();
+    if (d.ok) {
+      codeStatus.textContent = `✓ ${d.analysis.classes.length}c ${d.analysis.functions.length}fn`;
+      codeStatus.style.color = "var(--bash)";
+      codeInput.value = "";
+    } else {
+      codeStatus.textContent = "✗ " + (d.error || "");
+      codeStatus.style.color = "var(--danger)";
+    }
+  } catch (e) { codeStatus.textContent = "✗"; codeStatus.style.color = "var(--danger)"; }
+  finally { codeBtn.disabled = false; setTimeout(() => { codeStatus.textContent = ""; }, 4000); }
+}
+codeBtn.addEventListener("click", sendCode);
+codeInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendCode(); });
+
+// ★ Repo 전체 분석
+const repoInput = document.getElementById("repo-input");
+const repoBtn = document.getElementById("repo-btn");
+const repoStatus = document.getElementById("repo-status");
+async function sendRepo() {
+  const target = repoInput.value.trim(); if (!target) return;
+  repoStatus.textContent = "분석…"; repoStatus.style.color = "var(--accent)";
+  repoBtn.disabled = true;
+  try {
+    const body = target.startsWith("http") ? {url: target} : {path: target};
+    const r = await fetch("/analyze/repo", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      repoStatus.textContent = "✓"; repoStatus.style.color = "var(--bash)";
+    } else {
+      repoStatus.textContent = "✗ " + (d.error || ""); repoStatus.style.color = "var(--danger)";
+    }
+  } catch (e) { repoStatus.textContent = "✗ " + e.message; repoStatus.style.color = "var(--danger)"; }
+  finally { repoBtn.disabled = false; setTimeout(() => { repoStatus.textContent = ""; }, 5000); }
+}
+repoBtn.addEventListener("click", sendRepo);
+repoInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendRepo(); });
+
+// ★ 파일 Watcher
+const watchInput = document.getElementById("watch-input");
+const watchStartBtn = document.getElementById("watch-start-btn");
+const watchStopBtn = document.getElementById("watch-stop-btn");
+const watchStatusEl = document.getElementById("watch-status");
+async function watchStart() {
+  const path = watchInput.value.trim(); if (!path) return;
+  watchStatusEl.textContent = "시작 중…"; watchStatusEl.style.color = "var(--user)";
+  try {
+    const r = await fetch("/watch/start", { method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({path}) });
+    const d = await r.json();
+    if (d.ok) {
+      watchStatusEl.textContent = `🔄 watching ${d.file_count} 파일`;
+      watchStatusEl.style.color = "var(--bash)";
+    } else {
+      watchStatusEl.textContent = "✗ " + (d.error || "");
+      watchStatusEl.style.color = "var(--danger)";
+    }
+  } catch (e) { watchStatusEl.textContent = "✗ 에러"; watchStatusEl.style.color = "var(--danger)"; }
+}
+async function watchStop() {
+  const path = watchInput.value.trim();
+  try {
+    await fetch("/watch/stop", { method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({path: path || ""}) });
+    watchStatusEl.textContent = "중지됨"; watchStatusEl.style.color = "var(--muted)";
+    setTimeout(() => { watchStatusEl.textContent = ""; }, 3000);
+  } catch (e) {}
+}
+watchStartBtn.addEventListener("click", watchStart);
+watchStopBtn.addEventListener("click", watchStop);
+watchInput.addEventListener("keydown", (e) => { if (e.key === "Enter") watchStart(); });
+
+// ★ 디렉토리 picker (Repo/Watch 공용)
+const dirPickerModal = document.getElementById("dir-picker-modal");
+const dirPickerPath = document.getElementById("dir-picker-path");
+const dirPickerList = document.getElementById("dir-picker-list");
+const dirPickerTitle = document.getElementById("dir-picker-title");
+let _dirPickerTarget = null;  // "repo" | "watch"
+let _dirPickerCurrent = "";
+
+async function loadDirPicker(path) {
+  _dirPickerCurrent = path;
+  dirPickerPath.textContent = path;
+  dirPickerList.innerHTML = '<div style="color:var(--muted); padding:10px;">로딩...</div>';
+  try {
+    const r = await fetch(`/list?path=${encodeURIComponent(path)}`);
+    const d = await r.json();
+    if (!d.ok) { dirPickerList.innerHTML = `<div style="color:var(--danger); padding:10px;">${esc(d.error)}</div>`; return; }
+    _dirPickerCurrent = d.path;
+    dirPickerPath.textContent = d.path;
+    const html = [];
+    if (d.parent) {
+      html.push(`<div class="dp-item" data-path="${esc(d.parent)}" data-isdir="1" style="padding:6px 10px; cursor:pointer; border-bottom:1px solid var(--border);">📁 ..</div>`);
+    }
+    // 디렉토리만 보여줌 (파일 안 보여줌)
+    const dirs = d.items.filter(it => it.is_dir);
+    for (const it of dirs) {
+      html.push(`<div class="dp-item" data-path="${esc(it.path)}" data-isdir="1" style="padding:6px 10px; cursor:pointer; border-bottom:1px solid var(--border); color:var(--accent);">📁 ${esc(it.name)}</div>`);
+    }
+    if (dirs.length === 0) {
+      html.push(`<div style="color:var(--muted); padding:10px; font-size:11px;">(하위 디렉토리 없음 — 이 폴더 선택 가능)</div>`);
+    }
+    dirPickerList.innerHTML = html.join("");
+    dirPickerList.querySelectorAll(".dp-item").forEach(el => {
+      el.addEventListener("click", () => loadDirPicker(el.dataset.path));
+      el.addEventListener("mouseenter", () => { el.style.background = "rgba(88,166,255,0.1)"; });
+      el.addEventListener("mouseleave", () => { el.style.background = ""; });
+    });
+  } catch (e) { dirPickerList.innerHTML = `<div style="color:var(--danger); padding:10px;">${e.message}</div>`; }
+}
+
+function openDirPicker(target) {
+  _dirPickerTarget = target;
+  dirPickerTitle.textContent = target === "repo" ? "📁 Repo 디렉토리 선택" : "📁 Watch 디렉토리 선택";
+  dirPickerModal.classList.add("open");
+  loadDirPicker("~");
+}
+document.getElementById("repo-picker-btn").addEventListener("click", () => openDirPicker("repo"));
+document.getElementById("watch-picker-btn").addEventListener("click", () => openDirPicker("watch"));
+document.getElementById("dir-picker-cancel").addEventListener("click", () => dirPickerModal.classList.remove("open"));
+dirPickerModal.addEventListener("click", (e) => { if (e.target === dirPickerModal) dirPickerModal.classList.remove("open"); });
+document.getElementById("dir-picker-select").addEventListener("click", () => {
+  if (_dirPickerTarget === "repo") {
+    repoInput.value = _dirPickerCurrent;
+    addToRecent("repo", _dirPickerCurrent);
+  } else if (_dirPickerTarget === "watch") {
+    watchInput.value = _dirPickerCurrent;
+    addToRecent("watch", _dirPickerCurrent);
+  }
+  dirPickerModal.classList.remove("open");
+});
+dirPickerPath.addEventListener("click", () => {
+  const np = prompt("경로 직접 입력:", _dirPickerCurrent);
+  if (np) loadDirPicker(np);
+});
+
+// ★ 최근 경로 (localStorage)
+function getRecent(target) {
+  try { return JSON.parse(localStorage.getItem(`viz-recent-${target}`) || "[]"); }
+  catch { return []; }
+}
+function addToRecent(target, path) {
+  let arr = getRecent(target);
+  arr = arr.filter(p => p !== path);
+  arr.unshift(path);
+  arr = arr.slice(0, 10);
+  localStorage.setItem(`viz-recent-${target}`, JSON.stringify(arr));
+}
+
+const recentModal = document.getElementById("recent-modal");
+const recentList = document.getElementById("recent-list");
+let _recentTarget = null;
+
+function openRecent(target) {
+  _recentTarget = target;
+  const arr = getRecent(target);
+  if (arr.length === 0) {
+    recentList.innerHTML = '<div style="color:var(--muted); padding:20px; text-align:center;">최근 사용 없음. 폴더 선택 후 분석/시작하면 자동 저장됨.</div>';
+  } else {
+    recentList.innerHTML = arr.map(p => `
+      <div class="recent-item" data-path="${esc(p)}" style="padding:8px 12px; background:var(--bg); border:1px solid var(--border); border-radius:6px; margin-bottom:6px; cursor:pointer; font-family:ui-monospace,monospace; font-size:12px;">${esc(p)}</div>
+    `).join("");
+    recentList.querySelectorAll(".recent-item").forEach(el => {
+      el.addEventListener("click", () => {
+        if (_recentTarget === "repo") repoInput.value = el.dataset.path;
+        else if (_recentTarget === "watch") watchInput.value = el.dataset.path;
+        recentModal.classList.remove("open");
+      });
+      el.addEventListener("mouseenter", () => { el.style.borderColor = "var(--accent)"; });
+      el.addEventListener("mouseleave", () => { el.style.borderColor = ""; });
+    });
+  }
+  recentModal.classList.add("open");
+}
+document.getElementById("repo-recent-btn").addEventListener("click", () => openRecent("repo"));
+document.getElementById("watch-recent-btn").addEventListener("click", () => openRecent("watch"));
+document.getElementById("recent-cancel").addEventListener("click", () => recentModal.classList.remove("open"));
+recentModal.addEventListener("click", (e) => { if (e.target === recentModal) recentModal.classList.remove("open"); });
+document.getElementById("recent-clear").addEventListener("click", () => {
+  if (!_recentTarget) return;
+  if (!confirm("전체 삭제?")) return;
+  localStorage.removeItem(`viz-recent-${_recentTarget}`);
+  recentModal.classList.remove("open");
+});
+
+// 기존 sendRepo / watchStart 호출 시 자동 저장
+const _origSendRepo = sendRepo;
+sendRepo = async function() { const p = repoInput.value.trim(); if (p) addToRecent("repo", p); return _origSendRepo(); };
+const _origWatchStart = watchStart;
+watchStart = async function() { const p = watchInput.value.trim(); if (p) addToRecent("watch", p); return _origWatchStart(); };
+repoBtn.removeEventListener("click", _origSendRepo); repoBtn.addEventListener("click", sendRepo);
+watchStartBtn.removeEventListener("click", _origWatchStart); watchStartBtn.addEventListener("click", watchStart);
+
+// ★ 드래그앤드롭
+async function handleDrop(e) {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  if (!file.name.endsWith(".py")) {
+    codeStatus.textContent = "✗ .py만"; codeStatus.style.color = "var(--danger)";
+    return;
+  }
+  await uploadFile(file);
+}
+
+async function uploadFile(file) {
+  codeStatus.textContent = "업로드…"; codeStatus.style.color = "var(--bash)";
+  const text = await file.text();
+  try {
+    const r = await fetch("/analyze/upload", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({name: file.name, content: text})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      codeStatus.textContent = `✓ ${file.name}`; codeStatus.style.color = "var(--bash)";
+    } else {
+      codeStatus.textContent = "✗ " + (d.error || ""); codeStatus.style.color = "var(--danger)";
+    }
+  } catch (e) { codeStatus.textContent = "✗"; codeStatus.style.color = "var(--danger)"; }
+  setTimeout(() => { codeStatus.textContent = ""; }, 4000);
+}
+
+// ★ 파일 업로드 버튼
+document.getElementById("file-upload-btn").addEventListener("click", () => {
+  document.getElementById("file-input").click();
+});
+document.getElementById("file-input").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (file) await uploadFile(file);
+});
+
+// ★ 파일 picker 모달 (서버측 디렉토리 탐색)
+const pickerModal = document.getElementById("picker-modal");
+const pickerPath = document.getElementById("picker-path");
+const pickerList = document.getElementById("picker-list");
+
+async function loadDir(path) {
+  pickerList.innerHTML = '<div style="color:var(--muted); padding:10px;">로딩...</div>';
+  try {
+    const r = await fetch(`/list?path=${encodeURIComponent(path)}`);
+    const d = await r.json();
+    if (!d.ok) {
+      pickerList.innerHTML = `<div style="color:var(--danger); padding:10px;">${esc(d.error)}</div>`;
+      return;
+    }
+    pickerPath.textContent = d.path;
+    const html = [];
+    if (d.parent) {
+      html.push(`<div class="pk-item" data-path="${esc(d.parent)}" data-isdir="1" style="padding:6px 10px; cursor:pointer; border-bottom:1px solid var(--border);">📁 ..</div>`);
+    }
+    for (const it of d.items) {
+      const icon = it.is_dir ? "📁" : (it.is_py ? "🐍" : "📄");
+      const color = it.is_py ? "var(--bash)" : it.is_dir ? "var(--accent)" : "var(--muted)";
+      html.push(`<div class="pk-item" data-path="${esc(it.path)}" data-isdir="${it.is_dir ? 1 : 0}" data-ispy="${it.is_py ? 1 : 0}" style="padding:6px 10px; cursor:pointer; border-bottom:1px solid var(--border); color:${color};">${icon} ${esc(it.name)}</div>`);
+    }
+    pickerList.innerHTML = html.join("");
+    pickerList.querySelectorAll(".pk-item").forEach(el => {
+      el.addEventListener("click", () => {
+        const p = el.dataset.path;
+        if (el.dataset.isdir === "1") {
+          loadDir(p);
+        } else if (el.dataset.ispy === "1") {
+          codeInput.value = p;
+          pickerModal.classList.remove("open");
+          sendCode();
+        }
+      });
+      el.addEventListener("mouseenter", () => { el.style.background = "rgba(88,166,255,0.1)"; });
+      el.addEventListener("mouseleave", () => { el.style.background = ""; });
+    });
+  } catch (e) {
+    pickerList.innerHTML = `<div style="color:var(--danger); padding:10px;">${e.message}</div>`;
+  }
+}
+
+document.getElementById("picker-btn").addEventListener("click", () => {
+  pickerModal.classList.add("open");
+  loadDir("~");
+});
+pickerModal.addEventListener("click", (e) => { if (e.target === pickerModal) pickerModal.classList.remove("open"); });
+
+// 경로 직접 입력 가능
+pickerPath.addEventListener("click", () => {
+  const newPath = prompt("경로:", pickerPath.textContent);
+  if (newPath) loadDir(newPath);
+});
+
+// WebSocket
+let ws = null;
+function connect() {
+  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onopen = () => { statusEl.className = "status idle"; statusText.textContent = "대기 중"; };
+  ws.onmessage = (e) => { try { add(JSON.parse(e.data)); } catch (err) { console.error(err); } };
+  ws.onclose = () => { setError("재연결…"); setTimeout(connect, 1500); };
+  ws.onerror = () => { try { ws.close(); } catch (_) {} };
+}
+connect();
+</script>
+</body>
+</html>

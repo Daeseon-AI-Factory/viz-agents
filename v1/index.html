@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VIZ Live HUD — V1</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --dim: #6e7681;
+    --accent: #58a6ff;
+    --user: #d29922;
+    --edit: #f78166;
+    --bash: #3fb950;
+    --search: #a371f7;
+    --agent: #db61a2;
+    --danger: #f85149;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    padding: 14px;
+    min-height: 100vh;
+    font-size: 14px;
+  }
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--panel);
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .status { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
+  .status.active .dot { background: var(--bash); animation: pulse 1.2s infinite; }
+  .status.idle .dot { background: var(--muted); }
+  .status.error .dot { background: var(--danger); }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.6); }
+    50% { box-shadow: 0 0 0 6px rgba(63, 185, 80, 0); }
+  }
+  .stats { color: var(--muted); font-family: ui-monospace, monospace; font-size: 12px; display: flex; gap: 12px; }
+
+  .session-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    min-height: 24px;
+    align-items: center;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--text);
+    font-family: ui-monospace, monospace;
+    cursor: default;
+  }
+  .chip .sdot { width: 8px; height: 8px; border-radius: 50%; }
+  .chip-count { color: var(--muted); font-size: 10px; margin-left: 3px; }
+  .chip-hint { color: var(--dim); font-size: 11px; font-style: italic; }
+
+  #timeline { display: flex; flex-direction: column; gap: 5px; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    animation: slideIn 0.18s ease-out;
+    overflow: hidden;
+    position: relative;
+  }
+  .card.user { border-left-color: var(--user); background: #2d1f00; }
+  .card.read { border-left-color: var(--accent); }
+  .card.edit, .card.write { border-left-color: var(--edit); }
+  .card.bash { border-left-color: var(--bash); }
+  .card.search { border-left-color: var(--search); }
+  .card.agent { border-left-color: var(--agent); background: #2a0f23; }
+  .card.stop { border-left-color: var(--dim); opacity: 0.65; }
+  .card.notify { border-left-color: var(--user); background: #2d1f00; }
+  .card.askq { border-left-color: var(--user); background: linear-gradient(to right, #1a1505, var(--panel) 50%); }
+
+  .row { display: flex; align-items: baseline; gap: 8px; flex-wrap: nowrap; }
+  .ts { color: var(--dim); font-size: 11px; flex-shrink: 0; min-width: 56px; }
+  .sess {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    align-self: center;
+    background: var(--dim);
+  }
+  .icon { flex-shrink: 0; font-size: 14px; }
+  .tool { font-weight: 700; color: var(--text); flex-shrink: 0; }
+  .detail {
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+  .expandable { cursor: pointer; }
+  .expandable:hover { background: #1c2128; }
+  .body {
+    display: none;
+    margin-top: 8px;
+    padding: 10px;
+    background: var(--bg);
+    border-radius: 5px;
+    white-space: pre-wrap;
+    font-size: 11.5px;
+    max-height: 320px;
+    overflow: auto;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .expandable.open .body { display: block; }
+
+  /* AskUserQuestion 카드 */
+  .askq-question {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.5;
+    border: 1px solid var(--border);
+  }
+  .askq-multi {
+    font-size: 10.5px;
+    color: var(--accent);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .askq-options {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 8px;
+  }
+  .opt {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .opt.recommended {
+    border-color: var(--bash);
+    background: linear-gradient(to bottom, #0f2118, var(--bg));
+    box-shadow: 0 0 0 1px rgba(63, 185, 80, 0.3);
+  }
+  .opt-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .opt-tag {
+    font-size: 9.5px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: var(--bash);
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .opt-desc { color: var(--muted); font-size: 11.5px; font-weight: 400; }
+  .opt-preview {
+    margin-top: 4px;
+    padding: 6px 8px;
+    background: #08090d;
+    border-radius: 4px;
+    font-family: ui-monospace, monospace;
+    font-size: 10.5px;
+    white-space: pre-wrap;
+    color: var(--muted);
+    max-height: 140px;
+    overflow: auto;
+    border: 1px solid var(--border);
+    line-height: 1.4;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-3px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 60px 20px;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+  }
+  .empty h2 { font-size: 16px; margin-bottom: 6px; color: var(--text); }
+  .empty p { font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="top-row">
+    <div class="status idle" id="status"><span class="dot"></span><span id="status-text">대기 중</span></div>
+    <div class="stats">
+      <span id="stat-events">0 events</span>
+      <span id="stat-last">·</span>
+      <span style="color:var(--accent);">V1</span>
+    </div>
+  </div>
+  <div class="session-chips" id="session-chips">
+    <span class="chip-hint">활성 세션 없음 (Claude Code 호출이 발생하면 여기에 표시)</span>
+  </div>
+</header>
+
+<main id="timeline">
+  <div class="empty" id="empty">
+    <h2>VIZ Live HUD V1 준비 완료</h2>
+    <p>· 선택지(AskUserQuestion)가 시각 카드로 렌더링됩니다<br>
+       · 여러 Claude Code 세션이 색으로 구분됩니다<br>
+       · 카드 클릭하면 원본 JSON 확장</p>
+  </div>
+</main>
+
+<script>
+const TOOL_META = {
+  Read:         { icon: "📖", cls: "read" },
+  Edit:         { icon: "✏️", cls: "edit" },
+  Write:        { icon: "📝", cls: "write" },
+  NotebookEdit: { icon: "📝", cls: "edit" },
+  Bash:         { icon: "⚡", cls: "bash" },
+  Grep:         { icon: "🔍", cls: "search" },
+  Glob:         { icon: "🔍", cls: "search" },
+  Agent:        { icon: "🤖", cls: "agent" },
+  Task:         { icon: "🤖", cls: "agent" },
+  TaskCreate:   { icon: "📋", cls: "agent" },
+  TaskUpdate:   { icon: "📋", cls: "agent" },
+  WebFetch:     { icon: "🌐", cls: "search" },
+  WebSearch:    { icon: "🌐", cls: "search" },
+  Skill:        { icon: "🧩", cls: "" },
+  ToolSearch:   { icon: "🔧", cls: "" },
+  AskUserQuestion: { icon: "❓", cls: "askq" },
+};
+
+const SESSION_TTL_MS = 60000;  // 60초 안 보이면 비활성
+const sessions = new Map();  // id -> { hue, shortId, lastSeen, count }
+
+function hashHue(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h) + s.charCodeAt(i);
+    h |= 0;
+  }
+  return Math.abs(h) % 360;
+}
+
+function sessionFor(sid) {
+  if (!sid) return null;
+  if (!sessions.has(sid)) {
+    sessions.set(sid, {
+      hue: hashHue(sid),
+      shortId: sid.length > 8 ? sid.slice(0, 8) : sid,
+      lastSeen: Date.now(),
+      count: 0,
+    });
+  }
+  const s = sessions.get(sid);
+  s.lastSeen = Date.now();
+  s.count++;
+  return s;
+}
+
+function colorForSession(s) {
+  return s ? `hsl(${s.hue}, 65%, 55%)` : "var(--dim)";
+}
+
+const tl = document.getElementById("timeline");
+const empty = document.getElementById("empty");
+const statusEl = document.getElementById("status");
+const statusText = document.getElementById("status-text");
+const statEvents = document.getElementById("stat-events");
+const statLast = document.getElementById("stat-last");
+const chipsEl = document.getElementById("session-chips");
+let count = 0;
+let idleTimer = null;
+
+function setActive(){
+  statusEl.className = "status active";
+  statusText.textContent = "작업 중";
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    statusEl.className = "status idle";
+    statusText.textContent = "대기 중";
+  }, 4000);
+}
+
+function setError(msg){
+  statusEl.className = "status error";
+  statusText.textContent = msg;
+}
+
+function fmtTime(iso){ return iso.slice(11, 19); }
+function esc(s){
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
+function shorten(s, n){
+  s = String(s ?? "");
+  return s.length <= n ? s : s.slice(0, n - 1) + "…";
+}
+
+function renderChips(){
+  const now = Date.now();
+  const active = [...sessions.entries()]
+    .filter(([_, s]) => now - s.lastSeen < SESSION_TTL_MS)
+    .sort(([_, a], [__, b]) => b.lastSeen - a.lastSeen);
+  if (active.length === 0) {
+    chipsEl.innerHTML = '<span class="chip-hint">활성 세션 없음 (Claude Code 호출이 발생하면 여기에 표시)</span>';
+    return;
+  }
+  chipsEl.innerHTML = "";
+  active.forEach(([sid, s]) => {
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    chip.title = sid;
+    chip.innerHTML = `<span class="sdot" style="background:${colorForSession(s)}"></span>${esc(s.shortId)}<span class="chip-count">${s.count}</span>`;
+    chipsEl.appendChild(chip);
+  });
+}
+setInterval(renderChips, 1500);
+
+function renderOptionsBlock(questions){
+  const wrap = document.createElement("div");
+  questions.forEach(q => {
+    const qBox = document.createElement("div");
+    qBox.className = "askq-question";
+    let html = "";
+    if (q.multiSelect) {
+      html += `<div class="askq-multi">▢ 다중 선택 가능</div>`;
+    }
+    html += `<div style="font-weight:600;">${esc(q.question || "")}</div>`;
+    if (q.header) {
+      html += `<div style="color:var(--muted);font-size:11px;margin-top:2px;">${esc(q.header)}</div>`;
+    }
+    qBox.innerHTML = html;
+
+    const opts = document.createElement("div");
+    opts.className = "askq-options";
+    (q.options || []).forEach((opt, i) => {
+      const recommended = /\(추천\)|\(Recommended\)/i.test(opt.label || "");
+      const card = document.createElement("div");
+      card.className = "opt" + (recommended ? " recommended" : "");
+      let inner = `<div class="opt-header">`;
+      inner += `<span>${esc(opt.label || ("옵션 " + (i + 1)))}</span>`;
+      if (recommended) inner += `<span class="opt-tag">추천</span>`;
+      inner += `</div>`;
+      if (opt.description) inner += `<div class="opt-desc">${esc(opt.description)}</div>`;
+      if (opt.preview) inner += `<pre class="opt-preview">${esc(opt.preview)}</pre>`;
+      card.innerHTML = inner;
+      opts.appendChild(card);
+    });
+    qBox.appendChild(opts);
+    wrap.appendChild(qBox);
+  });
+  return wrap;
+}
+
+function makeCard(ev){
+  const d = ev.data || {};
+  const name = d.hook_event_name || "unknown";
+  if (name === "PreToolUse") return null;
+
+  const sid = d.session_id || null;
+  const sMeta = sessionFor(sid);
+
+  const card = document.createElement("div");
+  card.className = "card";
+
+  let icon = "·", cls = "", main = name, detail = "", body = "";
+  let extra = null;
+
+  if (name === "UserPromptSubmit") {
+    cls = "user"; icon = "💬"; main = "사용자";
+    detail = shorten(d.prompt, 220);
+    body = d.prompt || "";
+  } else if (name === "PostToolUse") {
+    const tn = d.tool_name || "Tool";
+    const meta = TOOL_META[tn] || { icon: "🔧", cls: "" };
+    icon = meta.icon; cls = meta.cls; main = tn;
+    const inp = d.tool_input || {};
+
+    if (tn === "AskUserQuestion") {
+      const qs = inp.questions || [];
+      detail = qs.length ? `${qs.length}개 질문: ${shorten(qs[0].question, 80)}` : "";
+      extra = renderOptionsBlock(qs);
+      body = JSON.stringify(d, null, 2);
+    } else if (tn === "Read" || tn === "Edit" || tn === "Write" || tn === "NotebookEdit") {
+      detail = inp.file_path || "";
+      body = JSON.stringify(d, null, 2);
+    } else if (tn === "Bash") {
+      detail = shorten(inp.command, 160);
+      body = JSON.stringify(d, null, 2);
+    } else if (tn === "Grep") {
+      detail = `${inp.pattern || ""} ${inp.path ? "in " + inp.path : ""}`.trim();
+      body = JSON.stringify(d, null, 2);
+    } else if (tn === "Glob") {
+      detail = inp.pattern || "";
+      body = JSON.stringify(d, null, 2);
+    } else if (tn === "Agent" || tn === "Task") {
+      detail = `[${inp.subagent_type || "general"}] ${inp.description || ""}`;
+      body = JSON.stringify(d, null, 2);
+    } else if (tn === "WebFetch" || tn === "WebSearch") {
+      detail = inp.url || inp.query || "";
+      body = JSON.stringify(d, null, 2);
+    } else if (tn === "Skill") {
+      detail = `/${inp.skill || ""} ${inp.args || ""}`.trim();
+      body = JSON.stringify(d, null, 2);
+    } else {
+      detail = shorten(JSON.stringify(inp), 200);
+      body = JSON.stringify(d, null, 2);
+    }
+  } else if (name === "Stop") {
+    cls = "stop"; icon = "✓"; main = "응답 완료";
+  } else if (name === "SubagentStop") {
+    cls = "stop"; icon = "🤖✓"; main = "서브에이전트 종료";
+  } else if (name === "Notification") {
+    cls = "notify"; icon = "🔔"; main = "입력 대기";
+    detail = d.message || "";
+  } else if (name === "SessionStart") {
+    cls = "stop"; icon = "▶"; main = "세션 시작";
+    detail = sid ? `세션 ${sMeta ? sMeta.shortId : ""}` : "";
+  } else {
+    main = name;
+    body = JSON.stringify(d, null, 2);
+  }
+
+  if (cls) card.classList.add(cls);
+  card.innerHTML = `
+    <div class="row">
+      <span class="ts">${fmtTime(ev.ts)}</span>
+      <span class="sess" style="background:${colorForSession(sMeta)}" title="${esc(sid || "")}"></span>
+      <span class="icon">${icon}</span>
+      <span class="tool">${esc(main)}</span>
+      <span class="detail">${esc(detail)}</span>
+    </div>`;
+  if (extra) card.appendChild(extra);
+  if (body) {
+    card.classList.add("expandable");
+    const bodyEl = document.createElement("pre");
+    bodyEl.className = "body";
+    bodyEl.textContent = body;
+    card.appendChild(bodyEl);
+    card.addEventListener("click", (e) => {
+      // 옵션 카드 안의 클릭은 카드 토글 무시
+      if (e.target.closest(".opt") || e.target.closest(".askq-question")) return;
+      card.classList.toggle("open");
+    });
+  }
+  return card;
+}
+
+function add(ev){
+  const card = makeCard(ev);
+  if (!card) return;
+  if (empty.parentNode) empty.remove();
+  tl.insertBefore(card, tl.firstChild);
+  count++;
+  statEvents.textContent = `${count} events`;
+  statLast.textContent = fmtTime(ev.ts);
+  setActive();
+  renderChips();
+}
+
+let ws = null;
+function connect(){
+  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onopen = () => {
+    statusEl.className = "status idle";
+    statusText.textContent = "대기 중";
+  };
+  ws.onmessage = (e) => {
+    try { add(JSON.parse(e.data)); } catch(err) { console.error(err); }
+  };
+  ws.onclose = () => {
+    setError("연결 끊김 (재연결 중…)");
+    setTimeout(connect, 1500);
+  };
+  ws.onerror = () => { try { ws.close(); } catch(_){} };
+}
+connect();
+</script>
+</body>
+</html>
