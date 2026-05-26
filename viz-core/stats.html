@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>viz-core — Usage Stats</title>
+<script src="/i18n.js"></script>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e; --dim: #6e7681;
+    --accent: #58a6ff; --user: #d29922; --edit: #f78166;
+    --bash: #3fb950; --search: #a371f7; --agent: #db61a2;
+    --danger: #f85149;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, sans-serif;
+    padding: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+  h1 { font-size: 26px; }
+  .subtitle { color: var(--muted); margin: 6px 0 22px; font-size: 14px; }
+  .nav { display: flex; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .nav a {
+    padding: 7px 13px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); text-decoration: none; font-size: 12px;
+    font-family: ui-monospace, monospace;
+  }
+  .nav a:hover { border-color: var(--accent); color: var(--accent); }
+  .back { background: var(--accent); color: #fff !important; }
+
+  /* 메트릭 카드 */
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 28px; }
+  .metric {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px 22px;
+  }
+  .metric-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+  .metric-value { font-size: 32px; font-weight: 800; color: var(--accent); font-family: ui-monospace, monospace; line-height: 1.1; margin-top: 8px; }
+  .metric-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* 섹션 */
+  .section { margin-bottom: 36px; }
+  .section h2 { font-size: 16px; color: var(--text); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+  /* 캘린더 heatmap */
+  .calendar-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; overflow: auto; }
+  .calendar { display: inline-grid; grid-template-rows: repeat(7, 14px); grid-auto-flow: column; gap: 3px; }
+  .cal-day {
+    width: 14px; height: 14px; border-radius: 3px;
+    background: var(--bg); border: 1px solid var(--border);
+    cursor: default;
+  }
+  .cal-day[data-c="1"] { background: rgba(63,185,80,0.25); border-color: rgba(63,185,80,0.35); }
+  .cal-day[data-c="2"] { background: rgba(63,185,80,0.45); border-color: rgba(63,185,80,0.55); }
+  .cal-day[data-c="3"] { background: rgba(63,185,80,0.65); border-color: rgba(63,185,80,0.75); }
+  .cal-day[data-c="4"] { background: rgba(63,185,80,0.85); border-color: rgba(63,185,80,0.95); }
+  .cal-day[data-c="5"] { background: var(--bash); border-color: var(--bash); }
+  .cal-legend { display: flex; gap: 6px; align-items: center; font-size: 11px; color: var(--muted); margin-top: 14px; }
+  .cal-legend-day { width: 12px; height: 12px; border-radius: 2px; background: var(--bg); border: 1px solid var(--border); }
+  .cal-month-labels { display: flex; gap: 17px; font-size: 10px; color: var(--muted); margin-bottom: 6px; font-family: ui-monospace, monospace; }
+
+  /* 표 */
+  .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 700px) { .data-grid { grid-template-columns: 1fr; } }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+  th { color: var(--muted); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  td code {
+    background: var(--bg); padding: 2px 7px; border-radius: 4px;
+    font-family: ui-monospace, monospace; font-size: 12px; color: var(--accent);
+  }
+  .bar { background: var(--accent); height: 6px; border-radius: 3px; display: inline-block; margin-left: 8px; vertical-align: middle; }
+  .empty { color: var(--muted); padding: 30px; text-align: center; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <a href="/" class="back" data-i18n="nav.back">← viz-core</a>
+  <a href="/library.html" data-i18n="nav.library">📚 My Library</a>
+  <a href="/concepts.html" data-i18n="nav.concepts">💡 Concepts</a>
+  <a href="/spec" data-i18n="nav.spec">📜 Spec</a>
+  <button class="i18n-toggle" onclick="i18n.toggle()" data-i18n-title="nav.toggle.title" style="margin-left:auto;">🇺🇸 EN</button>
+</div>
+
+<h1 data-i18n="stats.title">📊 Usage Stats — Dogfood</h1>
+<p class="subtitle" data-i18n="stats.subtitle">Tracks how I use viz-core daily. Proof for portfolio/interview.</p>
+
+<!-- 메트릭 카드 -->
+<div class="metrics" id="metrics-grid"></div>
+
+<!-- 캘린더 heatmap -->
+<div class="section">
+  <h2 data-i18n="stats.section.calendar">📅 Usage Calendar — 90 days</h2>
+  <div class="calendar-wrap">
+    <div class="cal-month-labels" id="cal-months"></div>
+    <div class="calendar" id="calendar"></div>
+    <div class="cal-legend">
+      <span data-i18n="stats.calendar.less">less</span>
+      <div class="cal-legend-day"></div>
+      <div class="cal-legend-day" style="background:rgba(63,185,80,0.25);"></div>
+      <div class="cal-legend-day" style="background:rgba(63,185,80,0.55);"></div>
+      <div class="cal-legend-day" style="background:rgba(63,185,80,0.85);"></div>
+      <div class="cal-legend-day" style="background:var(--bash);"></div>
+      <span data-i18n="stats.calendar.more">more</span>
+    </div>
+  </div>
+</div>
+
+<!-- top 자산 + viz_kind 분포 -->
+<div class="data-grid">
+  <div class="section">
+    <h2 data-i18n="stats.section.top">⭐ Most-viewed assets</h2>
+    <div style="background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:6px 0; overflow:auto;">
+      <table id="top-assets">
+        <thead><tr><th data-i18n="stats.table.asset">Asset</th><th style="text-align:right;" data-i18n="stats.table.count">Count</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="section">
+    <h2 data-i18n="stats.section.kinds">🎨 viz_kind distribution</h2>
+    <div style="background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:6px 0; overflow:auto;">
+      <table id="by-kind">
+        <thead><tr><th data-i18n="stats.table.kind">viz_kind</th><th style="text-align:right;" data-i18n="stats.table.count">Count</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 소스 -->
+<div class="section">
+  <h2 data-i18n="stats.section.sources">🌐 Sources</h2>
+  <div style="background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:6px 0; overflow:auto;">
+    <table id="by-source">
+      <thead><tr><th data-i18n="stats.table.source">Source</th><th style="text-align:right;" data-i18n="stats.table.count">Count</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+
+function fmtTime(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMin = Math.round((now - d) / 60000);
+  if (diffMin < 1) return i18n.t("stats.fmt.justnow");
+  if (diffMin < 60) return i18n.t("stats.fmt.minutes_ago", { n: diffMin });
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return i18n.t("stats.fmt.hours_ago", { n: diffH });
+  const diffD = Math.floor(diffH / 24);
+  if (diffD < 30) return i18n.t("stats.fmt.days_ago", { n: diffD });
+  return iso.slice(0, 10);
+}
+
+function fmtFirst(iso) {
+  if (!iso) return i18n.t("stats.fmt.no_record");
+  const d = new Date(iso);
+  const now = new Date();
+  const days = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+  return `${iso.slice(0,10)} (${i18n.t("stats.fmt.days_since", { n: days })})`;
+}
+
+function densityBucket(count) {
+  if (!count) return 0;
+  if (count >= 20) return 5;
+  if (count >= 10) return 4;
+  if (count >= 5) return 3;
+  if (count >= 3) return 2;
+  return 1;
+}
+
+function renderCalendar(calendarData) {
+  // 90일치 (12주 + 약간)
+  const days = 91;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const cal = document.getElementById("calendar");
+  cal.innerHTML = "";
+  const months = document.getElementById("cal-months");
+  months.innerHTML = "";
+
+  // 시작 — 90일 전 일요일
+  const start = new Date(today);
+  start.setDate(start.getDate() - days);
+  while (start.getDay() !== 0) start.setDate(start.getDate() + 1); // 일요일 정렬
+  const totalDays = Math.floor((today - start) / (1000 * 60 * 60 * 24)) + 1;
+
+  // 월 라벨
+  const monthSet = new Set();
+  const monthLabels = [];
+  for (let i = 0; i < totalDays; i += 7) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    const m = d.getMonth() + 1;
+    if (!monthSet.has(m)) {
+      monthSet.add(m);
+      monthLabels.push(`${m}월`);
+    } else {
+      monthLabels.push("");
+    }
+  }
+  months.innerHTML = monthLabels.map(l => `<span style="width:14px; display:inline-block;">${esc(l)}</span>`).join("");
+
+  for (let i = 0; i < totalDays; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    const iso = d.toISOString().slice(0, 10);
+    const count = calendarData[iso] || 0;
+    const bucket = densityBucket(count);
+    const div = document.createElement("div");
+    div.className = "cal-day";
+    div.setAttribute("data-c", bucket);
+    div.title = `${iso}: ${count}회`;
+    cal.appendChild(div);
+  }
+}
+
+async function load() {
+  const r = await fetch("/stats/data");
+  const d = await r.json();
+  if (!d.ok) { document.body.innerHTML = "<p>통계 로드 실패</p>"; return; }
+
+  // 메트릭 카드
+  const calDates = Object.keys(d.calendar || {});
+  const usedDays = calDates.length;
+  const last7 = (() => {
+    let count = 0; const today = new Date();
+    for (let i = 0; i < 7; i++) {
+      const dt = new Date(today); dt.setDate(dt.getDate() - i);
+      const iso = dt.toISOString().slice(0, 10);
+      if (d.calendar[iso]) count++;
+    }
+    return count;
+  })();
+  const grid = document.getElementById("metrics-grid");
+  const lang = i18n.getLang();
+  const kindsSuffix = lang === "ko" ? "종 viz_kind" : "viz kinds";
+  const last7Suffix = lang === "ko" ? `최근 7일 중 ${last7}일` : `${last7} of last 7 days`;
+  const metrics = [
+    { label: i18n.t("stats.metric.assets"), value: d.asset_count, sub: `${Object.keys(d.asset_kinds || {}).length} ${kindsSuffix}` },
+    { label: i18n.t("stats.metric.events"), value: d.total_events, sub: i18n.t("stats.metric.events.sub") },
+    { label: i18n.t("stats.metric.days"), value: usedDays, sub: last7Suffix },
+    { label: i18n.t("stats.metric.last"), value: fmtTime(d.last_event), sub: d.last_event ? d.last_event.replace("T"," ").slice(0, 16) : "—" },
+    { label: i18n.t("stats.metric.first"), value: fmtFirst(d.first_event), sub: "" },
+  ];
+  grid.innerHTML = metrics.map(m => `
+    <div class="metric">
+      <div class="metric-label">${esc(m.label)}</div>
+      <div class="metric-value" style="font-size:${m.value && String(m.value).length > 8 ? "20" : "32"}px;">${esc(m.value)}</div>
+      ${m.sub ? `<div class="metric-sub">${esc(m.sub)}</div>` : ""}
+    </div>
+  `).join("");
+
+  // 캘린더
+  renderCalendar(d.calendar || {});
+
+  // top assets
+  const topMax = Math.max(1, ...(d.top_assets || []).map(t => t.count));
+  const emptyMsg = i18n.t("stats.empty.tracking");
+  document.querySelector("#top-assets tbody").innerHTML =
+    (d.top_assets || []).length === 0
+      ? `<tr><td colspan="2" class="empty">${esc(emptyMsg)}</td></tr>`
+      : d.top_assets.map(t => `
+        <tr>
+          <td><code>${esc(t.key)}</code></td>
+          <td style="text-align:right;">${t.count}<span class="bar" style="width:${(t.count/topMax)*80}px;"></span></td>
+        </tr>
+      `).join("");
+
+  // by viz_kind
+  const kindMax = Math.max(1, ...Object.values(d.by_viz_kind || {}));
+  const kindList = Object.entries(d.by_viz_kind || {}).sort((a,b) => b[1] - a[1]);
+  document.querySelector("#by-kind tbody").innerHTML =
+    kindList.length === 0
+      ? `<tr><td colspan="2" class="empty">${esc(emptyMsg)}</td></tr>`
+      : kindList.map(([k, c]) => `
+        <tr>
+          <td><code>${esc(k)}</code></td>
+          <td style="text-align:right;">${c}<span class="bar" style="width:${(c/kindMax)*80}px;"></span></td>
+        </tr>
+      `).join("");
+
+  // by source
+  const srcMax = Math.max(1, ...Object.values(d.by_source || {}));
+  const srcList = Object.entries(d.by_source || {}).sort((a,b) => b[1] - a[1]);
+  document.querySelector("#by-source tbody").innerHTML =
+    srcList.length === 0
+      ? `<tr><td colspan="2" class="empty">${esc(emptyMsg)}</td></tr>`
+      : srcList.map(([k, c]) => `
+        <tr>
+          <td>${esc(k)}</td>
+          <td style="text-align:right;">${c}<span class="bar" style="width:${(c/srcMax)*80}px;"></span></td>
+        </tr>
+      `).join("");
+}
+
+load();
+setInterval(load, 30000);
+document.addEventListener("i18n:changed", load);
+</script>
+</body>
+</html>

@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>viz-core — 병신교육소 (개념 라이브러리)</title>
+<title>viz-core — Concepts</title>
+<script src="/i18n.js"></script>
 <style>
   :root {
     --bg: #0d1117; --panel: #161b22; --border: #30363d;
@@ -110,23 +111,25 @@
 <body>
 
 <div class="nav">
-  <a href="/" class="back">← viz-core</a>
-  <a href="/showcase">📐 showcase</a>
-  <a href="/spec">📜 spec</a>
+  <a href="/" class="back" data-i18n="nav.back">← viz-core</a>
+  <a href="/library.html" data-i18n="nav.library">📚 My Library</a>
+  <a href="/showcase" data-i18n="nav.showcase">🎨 Samples</a>
+  <a href="/spec" data-i18n="nav.spec">📜 Spec</a>
+  <button class="i18n-toggle" onclick="i18n.toggle()" data-i18n-title="nav.toggle.title" style="margin-left:auto;">🇺🇸 EN</button>
 </div>
 
-<h1>💡 병신교육소 — 개념 라이브러리</h1>
-<p class="subtitle">본인이 이해한 개념을 시각으로 저장. 나중에 AI 가 추천하면 0.5초에 다시 떠올리기 위한 자산.</p>
+<h1 data-i18n="concepts.title">💡 Concepts</h1>
+<p class="subtitle" data-i18n="concepts.subtitle">Save tech concepts you've understood. Recall in 0.5s.</p>
 
 <div class="toolbar">
-  <input type="text" id="search" placeholder="🔍 검색 (개념 이름 / 태그 / 카테고리)" />
-  <button class="btn" onclick="openAddModal()">+ 새 개념 추가</button>
+  <input type="text" id="search" data-i18n-attr="placeholder" data-i18n="concepts.search.placeholder" />
+  <button class="btn" onclick="openAddModal()" data-i18n="concepts.btn.add">+ New Concept</button>
 </div>
 
 <div id="grid" class="grid"></div>
 <div id="empty" class="empty" style="display:none;">
   <div style="font-size:48px; opacity:0.3;">💭</div>
-  <p style="margin-top:14px; font-size:14px;">아직 개념 없음 — 위 "새 개념 추가" 로 시작</p>
+  <p style="margin-top:14px; font-size:14px;" data-i18n="concepts.empty">No concepts yet — click '+ New Concept' to start</p>
 </div>
 
 <!-- 보기 모달 -->
@@ -259,9 +262,19 @@ let editing_slug = null;
 let viewing_slug = null;
 
 async function loadList() {
-  const r = await fetch("/concepts");
+  // /concepts 가 legacy. /library?viz_kind=concept 으로 통일하면서 i18n 지원
+  const lang = (window.i18n && i18n.getLang()) || "en";
+  const r = await fetch(`/library?viz_kind=concept&lang=${lang}`);
   const d = await r.json();
-  ALL_CONCEPTS = d.items || [];
+  // /library 응답 형식 정규화 → concepts 페이지가 기대하는 모양
+  ALL_CONCEPTS = (d.items || []).map(i => ({
+    slug: i.slug,
+    concept: i.title,
+    tagline: i.tagline,
+    category: i.category,
+    tags: i.tags,
+    analogy: { name: i.analogy_name, icon: i.icon },
+  }));
   renderList();
 }
 
@@ -284,7 +297,7 @@ function renderList() {
         </div>
       </div>
       <div class="card-tagline">${esc(c.tagline || "")}</div>
-      ${(c.analogy || {}).name ? `<div style="font-size:11px; color:var(--user); font-weight:700;">비유: ${esc(c.analogy.name)}</div>` : ""}
+      ${(c.analogy || {}).name ? `<div style="font-size:11px; color:var(--user); font-weight:700;">${i18n.t("concepts.analogy.prefix")} ${esc(c.analogy.name)}</div>` : ""}
       <div class="card-tags">
         ${(c.tags || []).map(t => `<span class="card-tag">${esc(t)}</span>`).join("")}
       </div>
@@ -294,11 +307,15 @@ function renderList() {
 
 async function openView(slug) {
   viewing_slug = slug;
-  const r = await fetch(`/concepts/${slug}`);
+  // /library 로 통일 — i18n 자동
+  const r = await fetch(`/library/concept/${slug}`);
   const d = await r.json();
   if (!d.ok) { alert(d.error); return; }
-  document.getElementById("view-title").textContent = d.concept.concept;
-  document.getElementById("view-body").innerHTML = renderConcept(d.concept);
+  const asset = d.asset;
+  // applyAssetI18n 이 받을 데이터
+  const localized = applyAssetI18n(asset);
+  document.getElementById("view-title").textContent = localized.concept || localized.title || slug;
+  document.getElementById("view-body").innerHTML = renderConcept(asset);
   document.getElementById("view-modal").classList.add("show");
 }
 
@@ -307,8 +324,30 @@ function closeViewModal() {
   viewing_slug = null;
 }
 
-// concept 렌더 (showcase 와 동일)
-function renderConcept(d) {
+// 자산 i18n 적용
+function applyAssetI18n(d) {
+  if (!d || !d.i18n) return d;
+  const lang = (window.i18n && i18n.getLang()) || "en";
+  const localized = d.i18n[lang];
+  if (!localized) return d;
+  const merged = { ...d, ...localized };
+  ["comparison", "tradeoffs", "analogy"].forEach(k => {
+    if (localized[k] && d[k]) merged[k] = { ...d[k], ...localized[k] };
+  });
+  if (localized.comparison) {
+    if (d.comparison?.without && localized.comparison.without) {
+      merged.comparison.without = { ...d.comparison.without, ...localized.comparison.without };
+    }
+    if (d.comparison?.with && localized.comparison.with) {
+      merged.comparison.with = { ...d.comparison.with, ...localized.comparison.with };
+    }
+  }
+  return merged;
+}
+
+// concept 렌더 (showcase 와 동일) + i18n
+function renderConcept(raw) {
+  const d = applyAssetI18n(raw);
   const cmp = d.comparison || {}, wo = cmp.without || {}, w_ = cmp.with || {};
   const tr = d.tradeoffs || {}, an = d.analogy || {};
   const stepsList = (arr) => (arr || []).map((s, i) =>
@@ -461,6 +500,7 @@ document.getElementById("push-btn").onclick = async () => {
 };
 
 document.getElementById("search").addEventListener("input", renderList);
+document.addEventListener("i18n:changed", () => renderList());
 
 loadList();
 </script>

@@ -1,0 +1,62 @@
+{
+  "slug": "viz-core-self",
+  "viz_kind": "depgraph",
+  "title": "viz-core self-architecture",
+  "tagline": "Visualizing this tool with this tool — meta dogfood",
+  "category": "self",
+  "tags": ["self", "architecture", "dogfood", "portfolio"],
+  "i18n": {
+    "ko": {
+      "title": "viz-core 자체 아키텍처",
+      "tagline": "이 도구로 이 도구를 시각화 — meta dogfood"
+    }
+  },
+  "services": [
+    {"id": "user",     "label": "User (me)",          "kind": "external"},
+    {"id": "browser",  "label": "Browser tab",        "kind": "frontend"},
+    {"id": "main",     "label": "/ Main page",        "kind": "frontend"},
+    {"id": "library",  "label": "📚 /library.html",  "kind": "frontend"},
+    {"id": "concepts", "label": "💡 /concepts.html", "kind": "frontend"},
+    {"id": "stats",    "label": "📊 /stats",         "kind": "frontend"},
+    {"id": "spec",     "label": "📜 /spec",          "kind": "frontend"},
+    {"id": "fastapi",  "label": "FastAPI",           "kind": "api"},
+    {"id": "ws",       "label": "WebSocket /ws",     "kind": "service"},
+    {"id": "viz_spec", "label": "/viz/spec parser",  "kind": "service"},
+    {"id": "viz_req",  "label": "/viz/request LLM",  "kind": "service"},
+    {"id": "lib_api",  "label": "/library API",      "kind": "service"},
+    {"id": "anthropic","label": "Anthropic Claude",  "kind": "external"},
+    {"id": "claude_code","label": "Claude Code Hook","kind": "external"},
+    {"id": "ai_paired","label": "ChatGPT/Cursor/etc","kind": "external"},
+    {"id": "fs_library","label": "library/*.json",   "kind": "db"},
+    {"id": "fs_log",   "label": "usage_log.jsonl",   "kind": "db"},
+    {"id": "chartjs",  "label": "Chart.js (CDN)",    "kind": "cdn"},
+    {"id": "mermaid",  "label": "Mermaid (CDN)",     "kind": "cdn"}
+  ],
+  "deps": [
+    {"from": "user",      "to": "browser",   "kind": "http"},
+    {"from": "browser",   "to": "main",      "kind": "http"},
+    {"from": "browser",   "to": "library",   "kind": "http"},
+    {"from": "browser",   "to": "concepts",  "kind": "http"},
+    {"from": "browser",   "to": "stats",     "kind": "http"},
+    {"from": "browser",   "to": "spec",      "kind": "http"},
+    {"from": "main",      "to": "fastapi",   "kind": "http"},
+    {"from": "library",   "to": "lib_api",   "kind": "http"},
+    {"from": "concepts",  "to": "lib_api",   "kind": "http"},
+    {"from": "stats",     "to": "fastapi",   "kind": "http"},
+    {"from": "fastapi",   "to": "ws",        "kind": "http"},
+    {"from": "fastapi",   "to": "viz_spec",  "kind": "http"},
+    {"from": "fastapi",   "to": "viz_req",   "kind": "http"},
+    {"from": "fastapi",   "to": "lib_api",   "kind": "http"},
+    {"from": "viz_req",   "to": "anthropic", "kind": "http"},
+    {"from": "claude_code","to": "viz_spec", "kind": "http"},
+    {"from": "ai_paired", "to": "viz_spec",  "kind": "http"},
+    {"from": "lib_api",   "to": "fs_library","kind": "db"},
+    {"from": "viz_spec",  "to": "fs_log",    "kind": "db"},
+    {"from": "viz_req",   "to": "fs_log",    "kind": "db"},
+    {"from": "lib_api",   "to": "fs_log",    "kind": "db"},
+    {"from": "library",   "to": "chartjs",   "kind": "http"},
+    {"from": "library",   "to": "mermaid",   "kind": "http"},
+    {"from": "main",      "to": "chartjs",   "kind": "http"},
+    {"from": "main",      "to": "mermaid",   "kind": "http"}
+  ]
+}

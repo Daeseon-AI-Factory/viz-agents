@@ -1,10 +1,17 @@
 {
   "slug": "cdn",
   "viz_kind": "concept",
-  "concept": "CDN",
-  "tagline": "동네 편의점이 본사 창고 대신 가까이",
-  "analogy": {
-    "name": "편의점",
-    "icon": "🏪"
+  "category": "performance",
+  "tags": ["CDN", "network", "static", "performance"],
+  "concept": "CDN (Content Delivery Network)",
+  "tagline": "Local convenience store instead of the central warehouse — closer to the user.",
+  "analogy": { "name": "Convenience store", "icon": "🏪" },
+  "i18n": {
+    "ko": {
+      "concept": "CDN",
+      "tagline": "동네 편의점이 본사 창고 대신 가까이",
+      "category": "성능",
+      "analogy": { "name": "편의점", "icon": "🏪" }
+    }
   }
 }

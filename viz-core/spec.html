@@ -162,17 +162,34 @@
 {"viz_kind": "...", "data": {...}}
 ```
 
-선택 가능한 viz_kind (23종):
-userflow, screenmap, depgraph, crud, callgraph, arch, timeseries, bar,
-funnel, heatmap, kanban, waterfall, cohort, kpi, gauge, diff, table,
+선택 가능한 viz_kind (24종):
+concept, userflow, screenmap, depgraph, crud, callgraph, arch, timeseries,
+bar, funnel, heatmap, kanban, waterfall, cohort, kpi, gauge, diff, table,
 flow, badge, code, animation, journey, whatif, mermaid
+
+★ 자산화 모드 (library 자동 영구 저장):
+사용자가 "박아줘" "저장해줘" "등록해줘" 등 영구 저장 의도면 save:true + slug 추가:
+```viz-spec
+{
+  "viz_kind": "concept",
+  "save": true,
+  "slug": "rate-limit",
+  "title": "Rate Limit",
+  "tagline": "한 줄 핵심",
+  "category": "성능",
+  "tags": ["..."],
+  "data": { ...viz_kind 별 schema... }
+}
+```
+viz-core 가 library/{viz_kind}/{slug}.json 으로 영구 저장 + 옆 탭 즉시 표시.
 
 규칙:
 - viz-spec 블록은 사이드카. 메인 답변에서 절대 언급 X.
-- 한 답변에 1개면 충분. 별도 시각이면 여러 개 OK.
-- 애매하면 빼는 게 나음. 잘못된 viz 보다 viz 없는 게 나음.
+- 한 답변에 1개면 충분.
+- 애매하면 빼는 게 나음.
 - 실제 데이터 / 짧게.
-- 각 viz_kind 의 schema 는 http://localhost:8765/spec 참고.</div>
+- save:true 는 사용자가 명시적 자산화 의도 표시 시만.
+- 각 viz_kind schema: http://localhost:8765/spec</div>
 
 <h3>English (full)</h3>
 <div class="copybox" id="prompt-en"><button class="copy-btn" data-target="prompt-en">📋 copy</button>You are paired with viz-core, an AI-output visualization layer. When your

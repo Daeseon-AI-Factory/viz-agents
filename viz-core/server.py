@@ -342,6 +342,11 @@ async def ai_guide() -> FileResponse:
     return FileResponse(HERE / "AI_GUIDE.md", media_type="text/markdown")
 
 
+@app.get("/i18n.js")
+async def i18n_js() -> FileResponse:
+    return FileResponse(HERE / "i18n.js", media_type="application/javascript")
+
+
 @app.get("/concepts.html")
 async def concepts_page() -> FileResponse:
     return FileResponse(HERE / "concepts.html")
@@ -475,13 +480,109 @@ def _import_concepts_to_library() -> int:
 _imported_count = _import_concepts_to_library()
 
 
+# ── ★ 사용 통계 (영구 로그) — 포폴 어필용 ──
+USAGE_LOG = HERE / "usage_log.jsonl"
+
+
+def _log_usage(kind: str, viz_kind: str | None = None, slug: str | None = None, source: str | None = None) -> None:
+    """모든 viz 표시 / 자산 push 기록. jsonl append 만 — 빠름, 휘발 X."""
+    try:
+        entry = {
+            "ts": _now_iso(),
+            "date": _now_iso()[:10],
+            "kind": kind,
+            "viz_kind": viz_kind,
+            "slug": slug,
+            "source": source,
+        }
+        with USAGE_LOG.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
+@app.get("/stats")
+async def stats_page() -> FileResponse:
+    return FileResponse(HERE / "stats.html")
+
+
+@app.get("/stats/data")
+async def stats_data() -> dict[str, Any]:
+    """사용 통계 집계 — 캘린더, top 자산, 메트릭."""
+    entries: list[dict] = []
+    if USAGE_LOG.exists():
+        try:
+            for line in USAGE_LOG.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entries.append(json.loads(line))
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    # 캘린더 (date → count)
+    calendar: dict[str, int] = {}
+    by_kind: dict[str, int] = {}
+    by_asset: dict[str, int] = {}  # "viz_kind/slug" → count
+    by_source: dict[str, int] = {}
+    for e in entries:
+        d = e.get("date") or (e.get("ts") or "")[:10]
+        if d:
+            calendar[d] = calendar.get(d, 0) + 1
+        vk = e.get("viz_kind")
+        if vk:
+            by_kind[vk] = by_kind.get(vk, 0) + 1
+        slug = e.get("slug")
+        if vk and slug:
+            key = f"{vk}/{slug}"
+            by_asset[key] = by_asset.get(key, 0) + 1
+        src = e.get("source") or e.get("kind")
+        if src:
+            by_source[src] = by_source.get(src, 0) + 1
+
+    # 자산 라이브러리 통계 (자산 추가 시점은 mtime)
+    asset_count = 0
+    asset_kinds: dict[str, int] = {}
+    if LIBRARY_DIR.exists():
+        for sub in LIBRARY_DIR.iterdir():
+            if not sub.is_dir():
+                continue
+            files = list(sub.glob("*.json"))
+            if files:
+                asset_count += len(files)
+                asset_kinds[sub.name] = len(files)
+
+    # top assets
+    top_assets = sorted(by_asset.items(), key=lambda x: x[1], reverse=True)[:10]
+
+    # 최근 사용
+    last_used = entries[-1].get("ts") if entries else None
+
+    return {
+        "ok": True,
+        "total_events": len(entries),
+        "first_event": entries[0].get("ts") if entries else None,
+        "last_event": last_used,
+        "calendar": calendar,
+        "by_viz_kind": by_kind,
+        "by_source": by_source,
+        "top_assets": [{"key": k, "count": c} for k, c in top_assets],
+        "asset_count": asset_count,
+        "asset_kinds": asset_kinds,
+    }
+
+
 @app.get("/library")
-async def library_list(viz_kind: str | None = None) -> dict[str, Any]:
-    """모든 자산 목록. ?viz_kind=concept 필터 가능."""
+async def library_list(viz_kind: str | None = None, lang: str | None = None) -> dict[str, Any]:
+    """모든 자산 목록. ?viz_kind=concept 필터 + ?lang=en|ko 다국어."""
     items = []
     kinds_to_scan = [viz_kind] if viz_kind else None
     if kinds_to_scan is None:
         kinds_to_scan = [d.name for d in LIBRARY_DIR.iterdir() if d.is_dir()]
+    lang = (lang or "").lower() if lang else None
     for kind in kinds_to_scan:
         sub = LIBRARY_DIR / kind
         if not sub.exists() or not sub.is_dir():
@@ -489,6 +590,11 @@ async def library_list(viz_kind: str | None = None) -> dict[str, Any]:
         for p in sorted(sub.glob("*.json")):
             try:
                 d = json.loads(p.read_text(encoding="utf-8"))
+                # i18n 적용 (lang 지정된 경우)
+                if lang and isinstance(d.get("i18n"), dict):
+                    loc = d["i18n"].get(lang)
+                    if isinstance(loc, dict):
+                        d = {**d, **loc}
                 items.append({
                     "slug": d.get("slug") or p.stem,
                     "viz_kind": d.get("viz_kind") or kind,
@@ -578,6 +684,7 @@ async def library_show(viz_kind: str, slug: str) -> dict[str, Any]:
     async with _lock:
         _history.append(record)
     await _broadcast(record)
+    _log_usage(kind="library_show", viz_kind=viz_kind, slug=slug)
     return {"ok": True, "slug": slug, "viz_kind": viz_kind, "pushed": True}
 
 
@@ -830,6 +937,7 @@ async def viz_request(request: Request) -> dict[str, Any]:
         async with _lock:
             _history.append(record)
         await _broadcast(record)
+        _log_usage(kind="viz_request", viz_kind=parsed.get("viz_kind"), source="user_nl")
         return {"ok": True, "viz": parsed}
     except Exception as e:
         return {"ok": False, "error": str(e)[:200]}
@@ -855,7 +963,7 @@ def _extract_viz_specs(text: str) -> list[dict]:
 
     형식 1: ```viz-spec\\n{"viz_kind":"...", "data":{...}}\\n```
     형식 2: ```viz-spec\\n{"viz_kind":"...", "viz_data":{...}}\\n```
-    여러 개 박혀있어도 다 추출. JSON 깨진 건 스킵.
+    옵션: "save": true / "slug": "..." 박혀있으면 library 에 자동 저장.
     """
     if not text:
         return []
@@ -879,6 +987,12 @@ def _extract_viz_specs(text: str) -> list[dict]:
             "viz_data": viz_data,
             "summary": d.get("summary") or d.get("title") or "",
             "viz_reason": d.get("reason") or "AI 가 viz-spec 마커로 직접 표시",
+            "save": bool(d.get("save")),
+            "slug": (d.get("slug") or "").strip().lower(),
+            "title": d.get("title") or "",
+            "tagline": d.get("tagline") or "",
+            "category": d.get("category") or "",
+            "tags": d.get("tags") or [],
         })
     return specs
 
@@ -907,6 +1021,7 @@ async def viz_spec(request: Request) -> dict[str, Any]:
                 "note": "viz-spec 마커 없음. AI 응답에 ```viz-spec ... ``` 박혀있어야 추출됨."}
 
     sent = []
+    saved = []
     for spec in specs:
         record = {
             "ts": _now_iso(),
@@ -927,9 +1042,27 @@ async def viz_spec(request: Request) -> dict[str, Any]:
         async with _lock:
             _history.append(record)
         await _broadcast(record)
+        _log_usage(kind="viz_spec", viz_kind=spec["viz_kind"], source=source)
         sent.append({"viz_kind": spec["viz_kind"]})
 
-    return {"ok": True, "count": len(sent), "specs": sent, "llm_used": False}
+        # ★ AI 가 save:true 박았으면 library 에 자동 저장
+        if spec["save"] and spec["slug"] and SLUG_PATTERN.match(spec["slug"]):
+            p = _library_path(spec["viz_kind"], spec["slug"])
+            if p:
+                merged = {
+                    "slug": spec["slug"],
+                    "viz_kind": spec["viz_kind"],
+                    "title": spec["title"] or spec.get("summary") or spec["slug"],
+                    "tagline": spec["tagline"],
+                    "category": spec["category"],
+                    "tags": spec["tags"],
+                    **(spec["viz_data"] if isinstance(spec["viz_data"], dict) else {}),
+                }
+                p.write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding="utf-8")
+                _log_usage(kind="auto_save", viz_kind=spec["viz_kind"], slug=spec["slug"], source=source)
+                saved.append(f"{spec['viz_kind']}/{spec['slug']}")
+
+    return {"ok": True, "count": len(sent), "specs": sent, "auto_saved": saved, "llm_used": False}
 
 
 # ── ★ 시각화 specialist 에이전트 (LLM 위임) ──

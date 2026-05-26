@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>viz-core — Library (자산 라이브러리)</title>
+<script src="/i18n.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script type="module">
   import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
@@ -183,20 +184,22 @@
 <body>
 
 <div class="nav">
-  <a href="/" class="back">← viz-core</a>
-  <a href="/showcase">📐 showcase</a>
-  <a href="/spec">📜 spec</a>
-  <a href="/concepts.html">💡 병신교육소 (concept 만)</a>
+  <a href="/" class="back" data-i18n="nav.back">← viz-core</a>
+  <a href="/showcase" data-i18n="nav.showcase">🎨 Samples</a>
+  <a href="/spec" data-i18n="nav.spec">📜 Spec</a>
+  <a href="/concepts.html" data-i18n="nav.concepts">💡 Concepts</a>
+  <a href="/stats" data-i18n="nav.stats">📊 Stats</a>
+  <button class="i18n-toggle" onclick="i18n.toggle()" data-i18n-title="nav.toggle.title" style="margin-left:auto;">🇺🇸 EN</button>
 </div>
 
-<h1>📚 자산 라이브러리</h1>
-<p class="subtitle">모든 viz_kind (24종) 의 본인 자산. 한 번 등록하면 옆 탭에 즉시 띄울 수 있음.</p>
+<h1 data-i18n="library.title">📚 Asset Library</h1>
+<p class="subtitle" data-i18n="library.subtitle">Your assets across all 24 viz kinds. One click to push to side tab.</p>
 
 <div class="toolbar">
-  <input type="text" id="search" placeholder="🔍 검색 (제목 / 태그 / 카테고리)" />
-  <button class="btn" onclick="openAddModal()">+ 새 자산</button>
-  <a href="/library/export" class="btn btn-secondary" style="text-decoration:none;" title="library 폴더 전체 zip 다운로드 (백업/이전)">⬇ 백업</a>
-  <button class="btn btn-secondary" onclick="document.getElementById('import-input').click()" title="zip 또는 JSON 파일 가져오기">⬆ 복원</button>
+  <input type="text" id="search" data-i18n-attr="placeholder" data-i18n="library.search.placeholder" />
+  <button class="btn" onclick="openAddModal()" data-i18n="library.btn.add">+ New Asset</button>
+  <a href="/library/export" class="btn btn-secondary" style="text-decoration:none;" data-i18n="library.btn.backup">⬇ Backup</a>
+  <button class="btn btn-secondary" onclick="document.getElementById('import-input').click()" data-i18n="library.btn.restore">⬆ Restore</button>
   <input type="file" id="import-input" accept=".zip,application/zip,application/json" style="display:none;" />
 </div>
 <div id="stats" style="font-size:12px; color:var(--muted); margin-bottom:14px; font-family:ui-monospace,monospace;"></div>
@@ -213,19 +216,19 @@
 <div class="modal-bg" id="view-modal" onclick="if (event.target === this) closeViewModal()">
   <div class="modal large">
     <div class="modal-head">
-      <h2 id="view-title">자산 보기</h2>
+      <h2 id="view-title">Asset</h2>
       <button class="modal-close" onclick="closeViewModal()">×</button>
     </div>
     <div class="view-meta" id="view-meta"></div>
     <div id="view-viz" style="margin-bottom:14px;"></div>
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-      <button class="json-toggle" id="json-toggle-btn" onclick="toggleJson()">▶ JSON 보기</button>
+      <button class="json-toggle" id="json-toggle-btn" onclick="toggleJson()"><span data-i18n="library.json.show">▶ Show JSON</span></button>
     </div>
     <div id="view-json" style="display:none;"></div>
     <div class="form-actions">
-      <button class="btn btn-danger" id="delete-btn">🗑 삭제</button>
-      <button class="btn btn-secondary" id="edit-btn">✏️ JSON 수정</button>
-      <button class="btn" id="push-btn">📺 메인 탭에 띄우기</button>
+      <button class="btn btn-danger" id="delete-btn" data-i18n="library.view.delete">🗑 Delete</button>
+      <button class="btn btn-secondary" id="edit-btn" data-i18n="library.view.edit">✏️ Edit JSON</button>
+      <button class="btn" id="push-btn" data-i18n="library.view.push">📺 Push to main tab</button>
     </div>
   </div>
 </div>
@@ -234,55 +237,55 @@
 <div class="modal-bg" id="add-modal" onclick="if (event.target === this) closeAddModal()">
   <div class="modal">
     <div class="modal-head">
-      <h2 id="add-title">+ 새 자산</h2>
+      <h2 id="add-title" data-i18n="library.add.title">+ New Asset</h2>
       <button class="modal-close" onclick="closeAddModal()">×</button>
     </div>
 
     <div class="form-row">
-      <label>viz_kind *</label>
+      <label data-i18n="library.add.field.vizkind">viz_kind *</label>
       <div>
         <select id="f-vizkind"></select>
-        <div class="hint">자산의 시각화 종류. 한 번 정하면 변경 X.</div>
+        <div class="hint" data-i18n="library.add.field.vizkind.hint">Visualization type. Cannot change later.</div>
       </div>
     </div>
     <div class="form-row">
-      <label>slug *</label>
+      <label data-i18n="library.add.field.slug">slug *</label>
       <div>
         <input type="text" id="f-slug" placeholder="my-msa, signup-flow, ..." />
-        <div class="hint">파일명. 소문자/숫자/하이픈만. 한 번 정하면 변경 X.</div>
+        <div class="hint" data-i18n="library.add.field.slug.hint">Filename. lowercase/digits/hyphen only.</div>
       </div>
     </div>
     <div class="form-row">
-      <label>제목 *</label>
-      <input type="text" id="f-title" placeholder="내 마이크로서비스 시스템" />
+      <label data-i18n="library.add.field.title">Title *</label>
+      <input type="text" id="f-title" placeholder="My microservice system" />
     </div>
     <div class="form-row">
-      <label>태그라인</label>
-      <input type="text" id="f-tagline" placeholder="한 줄 핵심 설명 (선택)" />
+      <label data-i18n="library.add.field.tagline">Tagline</label>
+      <input type="text" id="f-tagline" data-i18n-attr="placeholder" data-i18n="library.add.field.tagline.placeholder" />
     </div>
     <div class="form-row">
-      <label>카테고리</label>
-      <input type="text" id="f-category" placeholder="시스템 / 인증 / 성능 ..." />
+      <label data-i18n="library.add.field.category">Category</label>
+      <input type="text" id="f-category" placeholder="system / auth / performance ..." />
     </div>
     <div class="form-row">
-      <label>태그</label>
+      <label data-i18n="library.add.field.tags">Tags</label>
       <div>
-        <input type="text" id="f-tags" placeholder="auth, jwt, 토큰" />
-        <div class="hint">쉼표 구분</div>
+        <input type="text" id="f-tags" placeholder="auth, jwt, token" />
+        <div class="hint" data-i18n="library.add.field.tags.hint">Comma-separated</div>
       </div>
     </div>
     <div class="form-row">
-      <label>data (JSON) *</label>
+      <label data-i18n="library.add.field.data">data (JSON) *</label>
       <div>
-        <textarea id="f-data" placeholder='{"...viz_kind 별 schema..."}'></textarea>
-        <div class="hint">선택한 viz_kind 의 schema 에 맞는 JSON. 예시: <a href="/spec" target="_blank" style="color:var(--accent);">/spec</a> 카탈로그 참고.</div>
+        <textarea id="f-data" placeholder='{...}'></textarea>
+        <div class="hint" data-i18n="library.add.field.data.hint">JSON matching viz_kind schema. See /spec.</div>
       </div>
     </div>
 
     <div class="form-actions">
-      <button class="btn btn-secondary" onclick="loadTemplate()">📋 viz_kind 템플릿 채우기</button>
-      <button class="btn btn-secondary" onclick="closeAddModal()">취소</button>
-      <button class="btn" onclick="saveAsset()">💾 저장</button>
+      <button class="btn btn-secondary" onclick="loadTemplate()" data-i18n="library.add.btn.template">📋 Load template</button>
+      <button class="btn btn-secondary" onclick="closeAddModal()" data-i18n="library.add.btn.cancel">Cancel</button>
+      <button class="btn" onclick="saveAsset()" data-i18n="library.add.btn.save">💾 Save</button>
     </div>
   </div>
 </div>
@@ -352,7 +355,8 @@ let viewing = null;
 }
 
 async function loadList() {
-  const r = await fetch("/library");
+  const lang = (window.i18n && i18n.getLang()) || "en";
+  const r = await fetch(`/library?lang=${lang}`);
   const d = await r.json();
   ALL_ITEMS = d.items || [];
   renderFilters();
@@ -367,7 +371,10 @@ async function loadStats() {
     if (d.ok) {
       const kb = (d.total_bytes / 1024).toFixed(1);
       const kinds = Object.entries(d.by_kind).map(([k,n]) => `${k}:${n}`).join("  ·  ");
-      document.getElementById("stats").innerHTML = `📊 자산 <strong style="color:var(--accent);">${d.total}</strong>개  ·  ${d.kinds_used}종 viz_kind  ·  ${kb}KB  ${kinds ? `<br>&nbsp;&nbsp;&nbsp;${kinds}` : ""}`;
+      const lang = i18n.getLang();
+      const label = lang === "ko" ? "자산" : "assets";
+      const kindsLabel = lang === "ko" ? "종 viz_kind" : "viz kinds";
+      document.getElementById("stats").innerHTML = `📊 <strong style="color:var(--accent);">${d.total}</strong> ${label}  ·  ${d.kinds_used} ${kindsLabel}  ·  ${kb}KB  ${kinds ? `<br>&nbsp;&nbsp;&nbsp;${kinds}` : ""}`;
     }
   } catch (e) {}
 }
@@ -384,10 +391,10 @@ document.getElementById("import-input").addEventListener("change", async (e) => 
   });
   const d = await r.json();
   if (d.ok) {
-    alert(`복원 완료 — ${d.imported}개 가져옴, ${d.skipped}개 건너뜀.`);
+    alert(i18n.t("library.alert.imported", { imported: d.imported, skipped: d.skipped }));
     await loadList();
   } else {
-    alert("복원 실패: " + d.error);
+    alert(i18n.t("library.alert.import_fail") + d.error);
   }
   e.target.value = "";
 });
@@ -396,7 +403,8 @@ function renderFilters() {
   const counts = {};
   ALL_ITEMS.forEach(i => { counts[i.viz_kind] = (counts[i.viz_kind] || 0) + 1; });
   const total = ALL_ITEMS.length;
-  const chips = [`<div class="filter-chip ${!currentFilter ? "active" : ""}" onclick="setFilter('')">전체<span class="count">${total}</span></div>`];
+  const allLabel = i18n.t("library.filter.all");
+  const chips = [`<div class="filter-chip ${!currentFilter ? "active" : ""}" onclick="setFilter('')">${allLabel}<span class="count">${total}</span></div>`];
   ALL_KINDS.forEach(k => {
     if (counts[k]) {
       chips.push(`<div class="filter-chip ${currentFilter === k ? "active" : ""}" onclick="setFilter('${k}')">${k}<span class="count">${counts[k]}</span></div>`);
@@ -406,6 +414,8 @@ function renderFilters() {
 }
 
 function setFilter(k) { currentFilter = k; renderFilters(); renderList(); }
+// 언어 토글 시 동적 부분 다시 그리기
+document.addEventListener("i18n:changed", () => { renderFilters(); renderList(); loadStats(); });
 
 function renderList() {
   const q = document.getElementById("search").value.trim().toLowerCase();
@@ -455,15 +465,16 @@ function toggleJson() {
   const btn = document.getElementById("json-toggle-btn");
   if (el.style.display === "none") {
     el.style.display = "block";
-    btn.textContent = "▼ JSON 숨기기";
+    btn.textContent = i18n.t("library.json.hide");
   } else {
     el.style.display = "none";
-    btn.textContent = "▶ JSON 보기";
+    btn.textContent = i18n.t("library.json.show");
   }
 }
 
 // ── viz_kind 별 렌더링 분기 ──
-async function renderAny(viz_kind, d) {
+async function renderAny(viz_kind, raw) {
+  const d = applyAssetI18n(raw);
   // chart.js / mermaid 처럼 비동기 / canvas 필요한 것 분리
   if (viz_kind === "timeseries" || viz_kind === "bar") {
     const cid = `chart-${Math.random().toString(36).slice(2,8)}`;
@@ -690,8 +701,32 @@ function renderVizCohort(d) {
   }).join("");
   return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" style="background:var(--bg); border-radius:8px;">${weekHeaders}${rows}</svg>${d.title ? `<div style="text-align:center; color:var(--muted); font-size:12px; margin-top:6px;">${esc(d.title)}</div>` : ""}`;
 }
-function renderVizConcept(d) {
-  if (!d.concept) return `<div style="color:var(--muted);">concept 데이터 없음</div>`;
+// 자산 i18n 적용: d.i18n[lang] 있으면 해당 언어 필드 덮어쓰기
+function applyAssetI18n(d) {
+  if (!d || !d.i18n) return d;
+  const lang = (window.i18n && i18n.getLang()) || "en";
+  const localized = d.i18n[lang];
+  if (!localized) return d;
+  // 깊은 병합 (1 레벨)
+  const merged = { ...d, ...localized };
+  // comparison/tradeoffs/analogy 등 nested 도 병합
+  ["comparison", "tradeoffs", "analogy"].forEach(k => {
+    if (localized[k] && d[k]) merged[k] = { ...d[k], ...localized[k] };
+  });
+  if (localized.comparison) {
+    if (d.comparison?.without && localized.comparison.without) {
+      merged.comparison.without = { ...d.comparison.without, ...localized.comparison.without };
+    }
+    if (d.comparison?.with && localized.comparison.with) {
+      merged.comparison.with = { ...d.comparison.with, ...localized.comparison.with };
+    }
+  }
+  return merged;
+}
+
+function renderVizConcept(raw) {
+  const d = applyAssetI18n(raw);
+  if (!d.concept) return `<div style="color:var(--muted);">no concept data</div>`;
   const cmp = d.comparison || {}, wo = cmp.without || {}, w_ = cmp.with || {};
   const tr = d.tradeoffs || {}, an = d.analogy || {};
   const stepsList = (arr) => (arr || []).map((s, i) => `<div style="display:flex; gap:8px; align-items:center; padding:4px 0; font-size:13px;"><span style="background:var(--panel); color:var(--muted); width:18px; height:18px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0;">${i+1}</span><span>${esc(s)}</span></div>`).join("");
@@ -754,7 +789,8 @@ function renderVizScreenmap(d) {
   const arrows = transitions.map(t => { const a = screenById[t.from], b = screenById[t.to]; if (!a || !b) return ""; const ax = a.x + sW/2, ay = a.y + sH/2, bx = b.x + sW/2, by = b.y + sH/2; const dx = bx - ax, dy = by - ay, dist = Math.sqrt(dx*dx + dy*dy); const startX = ax + (dx/dist) * (sW/2 + 5), startY = ay + (dy/dist) * (sH/2 + 5); const endX = bx - (dx/dist) * (sW/2 + 8), endY = by - (dy/dist) * (sH/2 + 8); const label = t.action ? `<text x="${(startX+endX)/2}" y="${(startY+endY)/2 - 6}" text-anchor="middle" fill="var(--user)" font-size="10.5" font-weight="700">${esc(t.action)}</text>` : ""; return `<g><line x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}" stroke="var(--user)" stroke-width="2" marker-end="url(#sm-arr)" opacity="0.8"/>${label}</g>`; }).join("");
   return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" style="background:var(--bg); border-radius:8px;"><defs><marker id="sm-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--user)"/></marker></defs>${arrows}${screenEls}</svg>${d.title ? `<div style="text-align:center; color:var(--muted); font-size:12px; margin-top:6px;">${esc(d.title)}</div>` : ""}`;
 }
-function renderVizDepgraph(d) {
+function renderVizDepgraph(raw) {
+  const d = applyAssetI18n(raw);
   const services = d.services || [], deps = d.deps || [];
   if (!services.length) return `<div style="color:var(--muted);">depgraph 데이터 없음</div>`;
   const kindColor = { frontend: "#58a6ff", api: "#3fb950", service: "#a371f7", db: "#d29922", cache: "#f78166", cdn: "#db61a2", queue: "#58a6ff", external: "#8b949e", };
@@ -827,11 +863,11 @@ async function saveAsset() {
   const v = (id) => document.getElementById(id).value.trim();
   const viz_kind = document.getElementById("f-vizkind").value;
   const slug = v("f-slug").toLowerCase();
-  if (!slug) { alert("slug 필요"); return; }
-  if (!v("f-title")) { alert("제목 필요"); return; }
+  if (!slug) { alert(i18n.t("library.alert.slug_required")); return; }
+  if (!v("f-title")) { alert(i18n.t("library.alert.title_required")); return; }
   let data;
   try { data = JSON.parse(v("f-data") || "{}"); }
-  catch (e) { alert("data JSON 파싱 실패: " + e.message); return; }
+  catch (e) { alert(i18n.t("library.alert.json_parse_fail") + e.message); return; }
 
   const body = {
     slug, viz_kind,
@@ -865,7 +901,7 @@ document.getElementById("edit-btn").onclick = async () => {
 
 document.getElementById("delete-btn").onclick = async () => {
   if (!viewing) return;
-  if (!confirm(`"${viewing.viz_kind}/${viewing.slug}" 삭제? 되돌릴 수 없음.`)) return;
+  if (!confirm(`"${viewing.viz_kind}/${viewing.slug}" — ${i18n.t("library.confirm.delete")}`)) return;
   await fetch(`/library/${viewing.viz_kind}/${viewing.slug}`, { method: "DELETE" });
   closeViewModal();
   await loadList();
@@ -874,7 +910,7 @@ document.getElementById("delete-btn").onclick = async () => {
 document.getElementById("push-btn").onclick = async () => {
   if (!viewing) return;
   await fetch(`/library/${viewing.viz_kind}/${viewing.slug}/show`, { method: "POST" });
-  alert("옆 탭 viz-core 메인에 표시됨!");
+  alert(i18n.t("library.alert.pushed"));
 };
 
 document.getElementById("search").addEventListener("input", renderList);

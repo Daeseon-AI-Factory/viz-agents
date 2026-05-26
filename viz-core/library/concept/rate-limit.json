@@ -1,0 +1,57 @@
+{
+  "slug": "rate-limit",
+  "viz_kind": "concept",
+  "title": "Rate Limit",
+  "category": "performance",
+  "tags": ["performance", "traffic", "security"],
+  "concept": "Rate Limit",
+  "tagline": "Like a nightclub queue — cap the number of guests per time window.",
+  "analogy": { "name": "Nightclub queue", "icon": "🚦" },
+  "comparison": {
+    "without": {
+      "icon": "💥",
+      "label": "Unlimited entry → club bursts",
+      "steps": ["Endless guests", "No space", "Operations collapse"],
+      "metric": "Server down"
+    },
+    "with": {
+      "icon": "🚦",
+      "label": "N per minute pass through",
+      "steps": ["Form a queue", "Enter in order", "Stable operation"],
+      "metric": "99.9% available"
+    }
+  },
+  "tradeoffs": {
+    "pros": ["Server protection", "DDoS defense", "Fair distribution"],
+    "cons": ["Legitimate users wait too", "Threshold tuning is hard"]
+  },
+  "real_world": "API gateways, login attempt limits, payment call limits",
+  "i18n": {
+    "ko": {
+      "title": "Rate Limit",
+      "concept": "Rate Limit (속도 제한)",
+      "tagline": "클럽 입장 줄처럼 — 시간당 손님 수 제한",
+      "category": "성능",
+      "analogy": { "name": "클럽 입장 줄", "icon": "🚦" },
+      "comparison": {
+        "without": {
+          "icon": "💥",
+          "label": "무제한 입장 → 클럽 터짐",
+          "steps": ["손님 끝없이 들어옴", "공간 부족", "운영 마비"],
+          "metric": "서버 다운"
+        },
+        "with": {
+          "icon": "🚦",
+          "label": "분당 N명만 통과",
+          "steps": ["줄 서기", "순서대로 입장", "안정 운영"],
+          "metric": "99.9% 가용"
+        }
+      },
+      "tradeoffs": {
+        "pros": ["서버 보호", "DDoS 방어", "공정 분배"],
+        "cons": ["정당 사용자도 대기", "임계치 설정 어려움"]
+      },
+      "real_world": "API 게이트웨이, 로그인 시도 제한, 결제 호출 제한"
+    }
+  }
+}

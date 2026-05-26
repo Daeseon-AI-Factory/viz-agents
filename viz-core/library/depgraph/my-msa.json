@@ -1,38 +1,22 @@
 {
   "slug": "my-msa",
   "viz_kind": "depgraph",
-  "title": "내 첫 MSA",
-  "tagline": "3 서비스 + Postgres",
-  "tags": [
-    "test"
-  ],
+  "title": "My first MSA",
+  "tagline": "3 services + Postgres",
+  "tags": ["test"],
   "services": [
-    {
-      "id": "gw",
-      "label": "Gateway",
-      "kind": "frontend"
-    },
-    {
-      "id": "api",
-      "label": "API",
-      "kind": "api"
-    },
-    {
-      "id": "db",
-      "label": "DB",
-      "kind": "db"
-    }
+    { "id": "gw", "label": "Gateway", "kind": "frontend" },
+    { "id": "api", "label": "API", "kind": "api" },
+    { "id": "db", "label": "DB", "kind": "db" }
   ],
   "deps": [
-    {
-      "from": "gw",
-      "to": "api",
-      "kind": "http"
-    },
-    {
-      "from": "api",
-      "to": "db",
-      "kind": "db"
+    { "from": "gw", "to": "api", "kind": "http" },
+    { "from": "api", "to": "db", "kind": "db" }
+  ],
+  "i18n": {
+    "ko": {
+      "title": "내 첫 MSA",
+      "tagline": "3 서비스 + Postgres"
     }
-  ]
+  }
 }

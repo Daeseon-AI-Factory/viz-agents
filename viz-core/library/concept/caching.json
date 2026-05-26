@@ -1,53 +1,55 @@
 {
   "slug": "caching",
-  "category": "성능",
-  "tags": [
-    "성능",
-    "DB",
-    "메모리"
-  ],
-  "concept": "캐싱 (Caching)",
-  "tagline": "자주 쓰는 정보는 가까이 둬서, DB 까지 매번 안 가게.",
-  "analogy": {
-    "name": "책상 위 메모지",
-    "icon": "📝"
-  },
+  "viz_kind": "concept",
+  "category": "performance",
+  "tags": ["performance", "DB", "cache", "성능", "메모리"],
+  "concept": "Caching",
+  "tagline": "Keep frequently-used data close — avoid hitting the DB every time.",
+  "analogy": { "name": "Sticky note on desk", "icon": "📝" },
   "comparison": {
     "without": {
       "icon": "🗄️",
-      "label": "DB 까지 매번 감",
-      "steps": [
-        "사용자 요청",
-        "서버에서 DB 호출",
-        "디스크 읽기",
-        "데이터 가공",
-        "응답 전송"
-      ],
+      "label": "Goes to DB every time",
+      "steps": ["User request", "Server calls DB", "Read from disk", "Process data", "Send response"],
       "metric": "100ms"
     },
     "with": {
       "icon": "📝",
-      "label": "메모(캐시) 먼저 확인",
-      "steps": [
-        "사용자 요청",
-        "메모 확인 → 있음",
-        "즉시 응답"
-      ],
+      "label": "Check cache first",
+      "steps": ["User request", "Check cache → hit", "Respond instantly"],
       "metric": "1ms"
     }
   },
   "tradeoffs": {
-    "pros": [
-      "100배 빠름",
-      "DB 부담 ↓",
-      "비용 절감 (DB 호출 ↓)"
-    ],
-    "cons": [
-      "메모리 사용 ↑",
-      "오래된 정보 가능성",
-      "캐시 무효화 신경써야"
-    ]
+    "pros": ["100x faster", "Reduces DB load", "Cost savings (fewer DB calls)"],
+    "cons": ["Memory usage ↑", "Stale data possible", "Cache invalidation is hard"]
   },
-  "real_world": "API 응답, 사용자 세션, 자주 보는 페이지, 이미지/CSS",
-  "viz_kind": "concept"
+  "real_world": "API responses, user sessions, hot pages, images/CSS",
+  "i18n": {
+    "ko": {
+      "concept": "캐싱 (Caching)",
+      "tagline": "자주 쓰는 정보는 가까이 둬서, DB 까지 매번 안 가게.",
+      "category": "성능",
+      "analogy": { "name": "책상 위 메모지", "icon": "📝" },
+      "comparison": {
+        "without": {
+          "icon": "🗄️",
+          "label": "DB 까지 매번 감",
+          "steps": ["사용자 요청", "서버에서 DB 호출", "디스크 읽기", "데이터 가공", "응답 전송"],
+          "metric": "100ms"
+        },
+        "with": {
+          "icon": "📝",
+          "label": "메모(캐시) 먼저 확인",
+          "steps": ["사용자 요청", "메모 확인 → 있음", "즉시 응답"],
+          "metric": "1ms"
+        }
+      },
+      "tradeoffs": {
+        "pros": ["100배 빠름", "DB 부담 ↓", "비용 절감 (DB 호출 ↓)"],
+        "cons": ["메모리 사용 ↑", "오래된 정보 가능성", "캐시 무효화 신경써야"]
+      },
+      "real_world": "API 응답, 사용자 세션, 자주 보는 페이지, 이미지/CSS"
+    }
+  }
 }

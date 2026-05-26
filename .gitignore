@@ -12,6 +12,8 @@ __pycache__/
 **/.feedback.jsonl
 .favorites.jsonl
 **/.favorites.jsonl
+usage_log.jsonl
+**/usage_log.jsonl
 
 # 로그
 *.log

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>viz-core</title>
+<script src="/i18n.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script type="module">
   import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
@@ -340,20 +341,22 @@
 <body>
 
 <header>
-  <div class="status idle" id="status"><span class="dot"></span><span id="status-text">대기 중</span></div>
+  <div class="status idle" id="status"><span class="dot"></span><span id="status-text" data-i18n="index.status.idle">Idle</span></div>
   <div class="stats">
     <span id="stat-events">0 events</span>
     <span class="llm-badge llm-off" id="llm-badge">LLM</span>
-    <a href="/library.html" target="_blank" class="key-btn" style="text-decoration:none; background:rgba(88,166,255,0.18); border-color:#58a6ff; color:#58a6ff; font-weight:700;" title="너의 viz 지식 저장소 — 모든 자산 통합 관리">📚 내 저장소</a>
-    <a href="/concepts.html" target="_blank" class="key-btn" style="text-decoration:none; background:rgba(247,129,102,0.15); border-color:#f78166; color:#f78166;" title="병신교육소 — 본인이 이해한 개념">💡 병신교육소</a>
-    <a href="/showcase" target="_blank" class="key-btn" style="text-decoration:none;" title="모든 viz_kind 24종 샘플">🎨 Samples</a>
-    <a href="/spec" target="_blank" class="key-btn" style="text-decoration:none;" title="AI 가 viz-core 형식으로 출력하게 만들기">📜 Spec</a>
+    <a href="/library.html" target="_blank" class="key-btn" style="text-decoration:none; background:rgba(88,166,255,0.18); border-color:#58a6ff; color:#58a6ff; font-weight:700;" data-i18n="nav.library">📚 My Library</a>
+    <a href="/stats" target="_blank" class="key-btn" style="text-decoration:none; background:rgba(63,185,80,0.15); border-color:#3fb950; color:#3fb950;" data-i18n="nav.stats">📊 Stats</a>
+    <a href="/concepts.html" target="_blank" class="key-btn" style="text-decoration:none; background:rgba(247,129,102,0.15); border-color:#f78166; color:#f78166;" data-i18n="nav.concepts">💡 Concepts</a>
+    <a href="/showcase" target="_blank" class="key-btn" style="text-decoration:none;" data-i18n="nav.showcase">🎨 Samples</a>
+    <a href="/spec" target="_blank" class="key-btn" style="text-decoration:none;" data-i18n="nav.spec">📜 Spec</a>
+    <button class="i18n-toggle" onclick="i18n.toggle()" data-i18n-title="nav.toggle.title">🇺🇸 EN</button>
     <button class="key-btn" id="key-btn" type="button">⚙️</button>
   </div>
 </header>
 <div style="background:linear-gradient(135deg, rgba(88,166,255,0.08), rgba(247,129,102,0.04)); border:1px solid var(--border); border-left:3px solid #58a6ff; border-radius:8px; padding:12px 18px; margin-bottom:14px; font-size:13px; color:var(--text);">
-  <strong style="color:#58a6ff;">📚 너의 viz 지식 저장소</strong>
-  <span style="color:var(--muted); margin-left:8px;">— 본인이 이해한 개념과 시스템을 시각으로 영구 저장. 다시 찾을 때 0.5초.</span>
+  <strong style="color:#58a6ff;" data-i18n="index.identity.title">📚 Your viz knowledge vault</strong>
+  <span style="color:var(--muted); margin-left:8px;" data-i18n="index.identity.sub">— Save concepts and systems you've understood as visuals. Recall in 0.5s.</span>
   <span style="float:right; font-size:11px; color:var(--muted);" id="header-asset-count">─</span>
 </div>
 
@@ -1707,10 +1710,16 @@ async function refreshAssetCount() {
     const d = await r.json();
     if (d.ok) {
       const el = document.getElementById("header-asset-count");
-      if (el) el.innerHTML = `현재 <strong style="color:var(--accent);">${d.total}</strong>개 자산 · ${d.kinds_used}종`;
+      if (el) {
+        const cur = (window.i18n && i18n.t("index.identity.count")) || "current";
+        const ast = (window.i18n && i18n.t("index.identity.assets")) || "assets";
+        const knd = (window.i18n && i18n.t("index.identity.kinds")) || "kinds";
+        el.innerHTML = `${cur} <strong style="color:var(--accent);">${d.total}</strong> ${ast} · ${d.kinds_used} ${knd}`;
+      }
     }
   } catch (_) {}
 }
+document.addEventListener("i18n:changed", refreshAssetCount);
 refreshHealthz();
 refreshAssetCount();
 setInterval(refreshHealthz, 5000);
