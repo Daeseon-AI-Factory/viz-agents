@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>viz-core — Showcase</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "loose" });
+  window.__mermaid = mermaid;
+</script>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e; --dim: #6e7681;
+    --accent: #58a6ff; --user: #d29922; --edit: #f78166;
+    --bash: #3fb950; --search: #a371f7; --agent: #db61a2;
+    --danger: #f85149; --add: #3fb950; --del: #f85149;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, sans-serif;
+    padding: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+  h1 { font-size: 24px; margin-bottom: 6px; }
+  .subtitle { color: var(--muted); margin-bottom: 30px; font-size: 14px; }
+  .nav { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .nav a {
+    padding: 6px 12px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); text-decoration: none; font-size: 12px;
+    font-family: ui-monospace, monospace;
+  }
+  .nav a:hover { border-color: var(--accent); color: var(--accent); }
+  .back { padding: 8px 14px; background: var(--accent); color: #fff !important; }
+
+  .sample {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 24px;
+    overflow: hidden;
+    scroll-margin-top: 20px;
+  }
+  .sample-header {
+    background: rgba(88,166,255,0.06);
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  }
+  .sample-kind {
+    font-size: 18px; font-weight: 800;
+    color: var(--accent); font-family: ui-monospace, monospace;
+  }
+  .sample-when { color: var(--muted); font-size: 13px; }
+  .sample-body { padding: 22px; }
+  .sample-data {
+    margin-top: 14px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px 14px;
+    font-family: ui-monospace, monospace; font-size: 11px;
+    color: var(--muted); white-space: pre-wrap;
+    max-height: 120px; overflow: auto;
+  }
+
+  /* ───── viz_kind 렌더러 CSS (index.html 과 같게) ───── */
+  .viz-container {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 18px;
+  }
+
+  /* gauge */
+  .viz-gauge { display:flex; flex-direction:column; gap:10px; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:24px 28px; }
+  .viz-gauge-label { font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; font-weight:600; }
+  .viz-gauge-value { font-size:56px; font-weight:800; color:var(--text); font-family:ui-monospace,monospace; line-height:1.1; }
+  .viz-gauge-bar { background:var(--border); height:18px; border-radius:9px; overflow:hidden; }
+  .viz-gauge-fill { height:100%; background:linear-gradient(90deg, var(--accent), var(--bash)); box-shadow:0 0 12px rgba(63,185,80,0.4); }
+  .viz-gauge-unit { font-size:13px; color:var(--dim); }
+
+  /* badge */
+  .viz-badge { padding:18px 32px; border-radius:14px; font-size:22px; font-weight:800; display:inline-flex; align-items:center; gap:10px; letter-spacing:0.5px; }
+  .viz-badge.success { background:rgba(63,185,80,0.15); color:var(--bash); border:1px solid var(--bash); }
+  .viz-badge.error { background:rgba(248,81,73,0.15); color:var(--danger); border:1px solid var(--danger); }
+  .viz-badge.warning { background:rgba(210,153,34,0.15); color:var(--user); border:1px solid var(--user); }
+  .viz-badge.info { background:rgba(88,166,255,0.15); color:var(--accent); border:1px solid var(--accent); }
+
+  /* diff */
+  .viz-diff-file { color:var(--muted); font-family:ui-monospace,monospace; font-size:13px; margin-bottom:12px; font-weight:600; }
+  .viz-diff-panel { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .viz-diff-side { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:14px 16px; font-family:ui-monospace,monospace; font-size:13px; line-height:1.6; white-space:pre-wrap; max-height:300px; overflow:auto; }
+  .viz-diff-side.before { border-left:5px solid var(--del); background:rgba(248,81,73,0.05); }
+  .viz-diff-side.after { border-left:5px solid var(--add); background:rgba(63,185,80,0.05); }
+  .viz-diff-label { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+  .viz-diff-side.before .viz-diff-label { color:var(--del); }
+  .viz-diff-side.after .viz-diff-label { color:var(--add); }
+
+  /* table */
+  .viz-table-wrap { overflow:auto; max-height:320px; }
+  .viz-table { width:100%; border-collapse:collapse; font-family:ui-monospace,monospace; font-size:12px; }
+  .viz-table th, .viz-table td { padding:7px 12px; border-bottom:1px solid var(--border); text-align:left; }
+  .viz-table th { color:var(--muted); font-weight:600; background:var(--bg); position:sticky; top:0; }
+
+  /* flow */
+  .viz-flow { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .viz-flow-step { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 16px; font-size:13px; display:flex; align-items:center; gap:6px; font-weight:500; }
+  .viz-flow-step.done { border-color:var(--bash); color:var(--bash); }
+  .viz-flow-step.now { border-color:var(--accent); background:rgba(88,166,255,0.1); color:var(--text); font-weight:700; }
+  .viz-flow-step.todo { color:var(--dim); }
+  .viz-flow-arrow { color:var(--dim); font-size:14px; }
+
+  /* code */
+  .viz-code-wrap { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:14px; overflow:auto; }
+  .viz-code-lang { font-size:11px; color:var(--muted); text-transform:uppercase; margin-bottom:8px; font-weight:700; }
+  .viz-code-block { font-family:ui-monospace,monospace; font-size:13px; color:var(--text); white-space:pre; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <a href="/" class="back">← viz-core 메인</a>
+  <a href="#gauge">gauge</a>
+  <a href="#badge">badge</a>
+  <a href="#kpi">kpi</a>
+  <a href="#diff">diff</a>
+  <a href="#table">table</a>
+  <a href="#flow">flow</a>
+  <a href="#code">code</a>
+  <a href="#animation">animation</a>
+  <a href="#journey">journey</a>
+  <a href="#arch">arch</a>
+  <a href="#whatif">whatif</a>
+  <a href="#mermaid-seq">mermaid seq</a>
+  <a href="#mermaid-er">mermaid ER</a>
+  <a href="#mermaid-gantt">gantt</a>
+  <a href="#mermaid-mindmap">mindmap</a>
+  <a href="#mermaid-state">state</a>
+  <a href="#timeseries" style="border-color:var(--bash);">timeseries ★</a>
+  <a href="#bar" style="border-color:var(--bash);">bar ★</a>
+  <a href="#funnel" style="border-color:var(--bash);">funnel ★</a>
+  <a href="#heatmap" style="border-color:var(--user);">heatmap ★</a>
+  <a href="#kanban" style="border-color:var(--user);">kanban ★</a>
+  <a href="#waterfall" style="border-color:var(--agent);">waterfall ★</a>
+  <a href="#cohort" style="border-color:var(--agent);">cohort ★</a>
+  <a href="#crud" style="border-color:var(--search);">crud ★</a>
+  <a href="#userflow" style="border-color:var(--search);">userflow ★</a>
+  <a href="#screenmap" style="border-color:var(--search);">screenmap ★</a>
+  <a href="#depgraph" style="border-color:var(--search);">depgraph ★</a>
+  <a href="#concept" style="border-color:#f78166; background:rgba(247,129,102,0.08);">concept ★★</a>
+</div>
+
+<h1>viz-core Showcase</h1>
+<p class="subtitle">모든 viz_kind 의 샘플. 본인이 원하는 수준 평가용. 박이 안 좋으면 본인이 어떤 게 좋은지 알려주면 fix.</p>
+
+<!-- ── gauge ── -->
+<section id="gauge" class="sample">
+  <div class="sample-header"><span class="sample-kind">gauge</span><span class="sample-when">단일 수치 / 진행률</span></div>
+  <div class="sample-body">
+    <div id="render-gauge"></div>
+    <div class="sample-data">{"label":"테스트 통과율","value":12,"max":15,"unit":"통과"}</div>
+  </div>
+</section>
+
+<!-- ── badge ── -->
+<section id="badge" class="sample">
+  <div class="sample-header"><span class="sample-kind">badge</span><span class="sample-when">상태 라벨 (성공/실패/경고/정보)</span></div>
+  <div class="sample-body">
+    <div id="render-badge" style="display:flex; gap:14px; flex-wrap:wrap;"></div>
+    <div class="sample-data">{"label":"통과","tone":"success"}  / error / warning / info</div>
+  </div>
+</section>
+
+<!-- ── kpi ── -->
+<section id="kpi" class="sample">
+  <div class="sample-header"><span class="sample-kind">kpi</span><span class="sample-when">비즈니스 메트릭 여러 개</span></div>
+  <div class="sample-body">
+    <div id="render-kpi"></div>
+    <div class="sample-data">{"kpis":[{"label":"MRR","value":"$52K","trend":"up","delta":"+2.3%"},...]}</div>
+  </div>
+</section>
+
+<!-- ── diff ── -->
+<section id="diff" class="sample">
+  <div class="sample-header"><span class="sample-kind">diff</span><span class="sample-when">코드/텍스트 변경 (빨강/초록)</span></div>
+  <div class="sample-body">
+    <div id="render-diff"></div>
+  </div>
+</section>
+
+<!-- ── table ── -->
+<section id="table" class="sample">
+  <div class="sample-header"><span class="sample-kind">table</span><span class="sample-when">여러 항목 비교/나열</span></div>
+  <div class="sample-body">
+    <div id="render-table"></div>
+  </div>
+</section>
+
+<!-- ── flow ── -->
+<section id="flow" class="sample">
+  <div class="sample-header"><span class="sample-kind">flow</span><span class="sample-when">순서 있는 단계</span></div>
+  <div class="sample-body">
+    <div id="render-flow"></div>
+  </div>
+</section>
+
+<!-- ── code ── -->
+<section id="code" class="sample">
+  <div class="sample-header"><span class="sample-kind">code</span><span class="sample-when">짧은 코드 스니펫</span></div>
+  <div class="sample-body">
+    <div id="render-code"></div>
+  </div>
+</section>
+
+<!-- ── animation ── -->
+<section id="animation" class="sample">
+  <div class="sample-header"><span class="sample-kind">animation ★</span><span class="sample-when">점이 노드 사이 흐름 (진짜 모션)</span></div>
+  <div class="sample-body">
+    <div id="render-animation"></div>
+  </div>
+</section>
+
+<!-- ── journey ── -->
+<section id="journey" class="sample">
+  <div class="sample-header"><span class="sample-kind">journey</span><span class="sample-when">사용자 여정 단계</span></div>
+  <div class="sample-body">
+    <div id="render-journey"></div>
+  </div>
+</section>
+
+<!-- ── arch ── -->
+<section id="arch" class="sample">
+  <div class="sample-header"><span class="sample-kind">arch</span><span class="sample-when">아키텍처 레이어</span></div>
+  <div class="sample-body">
+    <div id="render-arch"></div>
+  </div>
+</section>
+
+<!-- ── whatif ── -->
+<section id="whatif" class="sample">
+  <div class="sample-header"><span class="sample-kind">whatif</span><span class="sample-when">현재 vs 변경 후</span></div>
+  <div class="sample-body">
+    <div id="render-whatif"></div>
+  </div>
+</section>
+
+<!-- ── mermaid sequence ── -->
+<section id="mermaid-seq" class="sample">
+  <div class="sample-header"><span class="sample-kind">mermaid: sequenceDiagram</span><span class="sample-when">시간순 메시지 흐름</span></div>
+  <div class="sample-body">
+    <div id="mmd-seq"></div>
+  </div>
+</section>
+
+<!-- ── mermaid ER ── -->
+<section id="mermaid-er" class="sample">
+  <div class="sample-header"><span class="sample-kind">mermaid: erDiagram</span><span class="sample-when">DB 테이블 관계</span></div>
+  <div class="sample-body">
+    <div id="mmd-er"></div>
+  </div>
+</section>
+
+<!-- ── mermaid gantt ── -->
+<section id="mermaid-gantt" class="sample">
+  <div class="sample-header"><span class="sample-kind">mermaid: gantt</span><span class="sample-when">프로젝트 일정</span></div>
+  <div class="sample-body">
+    <div id="mmd-gantt"></div>
+  </div>
+</section>
+
+<!-- ── mermaid mindmap ── -->
+<section id="mermaid-mindmap" class="sample">
+  <div class="sample-header"><span class="sample-kind">mermaid: mindmap</span><span class="sample-when">생각 정리 / 비전</span></div>
+  <div class="sample-body">
+    <div id="mmd-mindmap"></div>
+  </div>
+</section>
+
+<!-- ── mermaid state ── -->
+<section id="mermaid-state" class="sample">
+  <div class="sample-header"><span class="sample-kind">mermaid: stateDiagram-v2</span><span class="sample-when">상태 머신 (주문/사용자 상태 등)</span></div>
+  <div class="sample-body">
+    <div id="mmd-state"></div>
+  </div>
+</section>
+
+<!-- ═══════════════ Phase 1: 차트 (Chart.js) ═══════════════ -->
+<h2 style="font-size:18px; color:var(--bash); margin:40px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--border);">📊 Phase 1 — 차트 (Chart.js)</h2>
+
+<!-- ── timeseries ── -->
+<section id="timeseries" class="sample">
+  <div class="sample-header"><span class="sample-kind">timeseries ★</span><span class="sample-when">시계열 추세 — 매출/사용자/응답시간</span></div>
+  <div class="sample-body">
+    <div style="height:260px;"><canvas id="render-timeseries"></canvas></div>
+    <div class="sample-data">{"labels":["Jan",...],"series":[{"label":"매출","values":[...]}]}</div>
+  </div>
+</section>
+
+<!-- ── bar ── -->
+<section id="bar" class="sample">
+  <div class="sample-header"><span class="sample-kind">bar ★</span><span class="sample-when">카테고리 비교 — 지역/팀/제품별</span></div>
+  <div class="sample-body">
+    <div style="height:260px;"><canvas id="render-bar"></canvas></div>
+    <div class="sample-data">{"labels":["서울","부산","대구",...],"values":[...]}</div>
+  </div>
+</section>
+
+<!-- ── funnel ── -->
+<section id="funnel" class="sample">
+  <div class="sample-header"><span class="sample-kind">funnel ★</span><span class="sample-when">전환 깔때기 — 방문→가입→결제</span></div>
+  <div class="sample-body">
+    <div id="render-funnel"></div>
+    <div class="sample-data">{"stages":[{"name":"방문","value":10000},{"name":"가입","value":3200},...]}</div>
+  </div>
+</section>
+
+<!-- ═══════════════ Phase 2: 운영/프로젝트 ═══════════════ -->
+<h2 style="font-size:18px; color:var(--user); margin:40px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--border);">⚙️ Phase 2 — 운영/프로젝트</h2>
+
+<!-- ── heatmap ── -->
+<section id="heatmap" class="sample">
+  <div class="sample-header"><span class="sample-kind">heatmap ★</span><span class="sample-when">시간×지표 분포 — CPU/메모리/트래픽</span></div>
+  <div class="sample-body">
+    <div id="render-heatmap"></div>
+    <div class="sample-data">{"labels_x":["0시","4시",...],"labels_y":["월","화",...],"matrix":[[...]]}</div>
+  </div>
+</section>
+
+<!-- ── kanban ── -->
+<section id="kanban" class="sample">
+  <div class="sample-header"><span class="sample-kind">kanban ★</span><span class="sample-when">작업 보드 — TODO/DOING/DONE</span></div>
+  <div class="sample-body">
+    <div id="render-kanban"></div>
+    <div class="sample-data">{"columns":[{"name":"TODO","cards":[{"title":"...","assignee":"...","tags":[...]}]},...]}</div>
+  </div>
+</section>
+
+<!-- ═══════════════ Phase 3: 고급 분석 ═══════════════ -->
+<h2 style="font-size:18px; color:var(--agent); margin:40px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--border);">📈 Phase 3 — 고급 분석</h2>
+
+<!-- ── waterfall ── -->
+<section id="waterfall" class="sample">
+  <div class="sample-header"><span class="sample-kind">waterfall ★</span><span class="sample-when">분산 추적 — API trace span 시간축</span></div>
+  <div class="sample-body">
+    <div id="render-waterfall"></div>
+    <div class="sample-data">{"spans":[{"name":"API /users","service":"gateway","start_ms":0,"duration_ms":120}]}</div>
+  </div>
+</section>
+
+<!-- ── cohort ── -->
+<section id="cohort" class="sample">
+  <div class="sample-header"><span class="sample-kind">cohort ★</span><span class="sample-when">retention 매트릭스 — 월별 유지율</span></div>
+  <div class="sample-body">
+    <div id="render-cohort"></div>
+    <div class="sample-data">{"cohorts":[{"label":"2026-01","initial":1000,"retention":[1000,650,420,300,...]}]}</div>
+  </div>
+</section>
+
+<!-- ═══════════════ Phase 4: PM/UX/시스템 ═══════════════ -->
+<h2 style="font-size:18px; color:var(--search); margin:40px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--border);">🎨 Phase 4 — PM/UX/시스템 설계</h2>
+
+<!-- ── crud ── -->
+<section id="crud" class="sample">
+  <div class="sample-header"><span class="sample-kind">crud ★</span><span class="sample-when">권한 매트릭스 — 엔티티 × 역할 (PM/설계 필수)</span></div>
+  <div class="sample-body">
+    <div id="render-crud"></div>
+    <div class="sample-data">{"entities":["User","Order"],"actors":["User","Admin"],"matrix":[[["R","U"],["C","R","U","D"]],...]}</div>
+  </div>
+</section>
+
+<!-- ── userflow ── -->
+<section id="userflow" class="sample">
+  <div class="sample-header"><span class="sample-kind">userflow ★</span><span class="sample-when">사용자 동선 + 분기 (결정 노드)</span></div>
+  <div class="sample-body">
+    <div id="render-userflow"></div>
+    <div class="sample-data">{"nodes":[{"id":"visit","kind":"start"},{"id":"loggedin","kind":"decision"}],"edges":[{"from":"visit","to":"loggedin"}]}</div>
+  </div>
+</section>
+
+<!-- ── screenmap ── -->
+<section id="screenmap" class="sample">
+  <div class="sample-header"><span class="sample-kind">screenmap ★</span><span class="sample-when">화면 박스 + 전환 화살표 (UX 와이어프레임)</span></div>
+  <div class="sample-body">
+    <div id="render-screenmap"></div>
+    <div class="sample-data">{"screens":[{"id":"home","title":"홈","x":0,"y":0,"items":[...]}],"transitions":[{"from":"home","to":"detail","action":"클릭"}]}</div>
+  </div>
+</section>
+
+<!-- ── depgraph ── -->
+<section id="depgraph" class="sample">
+  <div class="sample-header"><span class="sample-kind">depgraph ★</span><span class="sample-when">서비스 의존성 그래프 (마이크로서비스)</span></div>
+  <div class="sample-body">
+    <div id="render-depgraph"></div>
+    <div class="sample-data">{"services":[{"id":"gw","label":"Gateway","kind":"frontend"}],"deps":[{"from":"gw","to":"auth","kind":"http"}]}</div>
+  </div>
+</section>
+
+<!-- ═══════════════ Phase 5: 개념 이해 (병신도 이해) ═══════════════ -->
+<h2 style="font-size:18px; color:#f78166; margin:40px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--border);">💡 Phase 5 — 기술 개념 이해 (병신도 이해)</h2>
+<p style="font-size:13px; color:var(--muted); margin-bottom:14px;">AI 가 추천하는 기술(캐싱/Index/JWT 등) — buzzword 빼고 비유 + 시각 + 장단 + 실무로 즉시 이해.</p>
+
+<!-- ── concept: caching ── -->
+<section id="concept" class="sample">
+  <div class="sample-header"><span class="sample-kind">concept ★★</span><span class="sample-when">캐싱 — 자주 쓰는 정보는 가까이</span></div>
+  <div class="sample-body">
+    <div id="render-concept"></div>
+    <div class="sample-data">{"concept":"캐싱","tagline":"...","analogy":{"name":"책상 위 메모지","icon":"📝"},"comparison":{...},"tradeoffs":{...},"real_world":"..."}</div>
+  </div>
+</section>
+
+<!-- ── concept: index ── -->
+<section id="concept-index" class="sample">
+  <div class="sample-header"><span class="sample-kind">concept ★★</span><span class="sample-when">Index — 백과사전 색인</span></div>
+  <div class="sample-body">
+    <div id="render-concept-index"></div>
+  </div>
+</section>
+
+<!-- ── concept: jwt ── -->
+<section id="concept-jwt" class="sample">
+  <div class="sample-header"><span class="sample-kind">concept ★★</span><span class="sample-when">JWT — 영화관 티켓</span></div>
+  <div class="sample-body">
+    <div id="render-concept-jwt"></div>
+  </div>
+</section>
+
+<script>
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
+
+// ── renderers (index.html 과 동일) ──
+function renderVizGauge(d) {
+  const v = Number(d.value || 0), m = Number(d.max || 100);
+  const pct = m > 0 ? Math.min(100, (v / m) * 100) : 0;
+  return `<div class="viz-gauge">
+    <div class="viz-gauge-label">${esc(d.label || "")}</div>
+    <div class="viz-gauge-value">${esc(String(v))}<span class="viz-gauge-unit"> / ${esc(String(m))} ${esc(d.unit || "")}</span></div>
+    <div class="viz-gauge-bar"><div class="viz-gauge-fill" style="width:${pct}%"></div></div></div>`;
+}
+function renderVizBadge(d) {
+  return `<span class="viz-badge ${esc(d.tone || "info")}">${esc(d.label || "")}</span>`;
+}
+function renderVizKpi(d) {
+  const cards = d.kpis.map(k => {
+    const t = k.trend || "flat", ti = t === "up" ? "▲" : t === "down" ? "▼" : "━";
+    const tc = t === "up" ? "var(--bash)" : t === "down" ? "var(--danger)" : "var(--muted)";
+    const bg = t === "up" ? "rgba(63,185,80,0.08)" : t === "down" ? "rgba(248,81,73,0.08)" : "var(--bg)";
+    return `<div style="background:${bg}; border:1px solid var(--border); border-radius:10px; padding:18px 22px;">
+      <div style="font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; font-weight:600;">${esc(k.label)}</div>
+      <div style="font-size:36px; font-weight:800; font-family:ui-monospace,monospace; line-height:1.1; margin-top:8px;">${esc(k.value)}</div>
+      <div style="font-size:14px; color:${tc}; margin-top:6px; font-weight:600;">${ti} ${esc(k.delta)}</div></div>`;
+  }).join("");
+  return `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px;">${cards}</div>`;
+}
+function renderVizDiff(d) {
+  return `${d.file ? `<div class="viz-diff-file">📄 ${esc(d.file)}</div>` : ""}
+    <div class="viz-diff-panel">
+      <div class="viz-diff-side before"><div class="viz-diff-label">- BEFORE</div><div>${esc(d.before)}</div></div>
+      <div class="viz-diff-side after"><div class="viz-diff-label">+ AFTER</div><div>${esc(d.after)}</div></div>
+    </div>`;
+}
+function renderVizTable(d) {
+  const ths = (d.headers || []).map(h => `<th>${esc(h)}</th>`).join("");
+  const trs = (d.rows || []).map(r => `<tr>${(r || []).map(c => `<td>${esc(c)}</td>`).join("")}</tr>`).join("");
+  return `<div class="viz-table-wrap"><table class="viz-table"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
+}
+function renderVizFlow(d) {
+  const parts = [];
+  d.steps.forEach((s, i) => {
+    const st = s.status || "todo";
+    const icon = st === "done" ? "✓" : st === "now" ? "▶" : "○";
+    parts.push(`<div class="viz-flow-step ${esc(st)}">${icon} ${esc(s.name)}</div>`);
+    if (i < d.steps.length - 1) parts.push(`<span class="viz-flow-arrow">→</span>`);
+  });
+  return `<div class="viz-flow">${parts.join("")}</div>`;
+}
+function renderVizCode(d) {
+  return `<div class="viz-code-wrap">${d.lang ? `<div class="viz-code-lang">${esc(d.lang)}</div>` : ""}<pre class="viz-code-block">${esc(d.code)}</pre></div>`;
+}
+function renderVizAnimation(d) {
+  const nodes = d.nodes, flow = d.flow, duration = d.duration_ms || 3000;
+  const w = 700, h = 130;
+  const nodeMap = {};
+  nodes.forEach((n, i) => {
+    const x = 60 + i * ((w - 120) / Math.max(1, nodes.length - 1));
+    nodeMap[n.id] = { x, y: h / 2, label: n.label || n.id };
+  });
+  const circles = Object.entries(nodeMap).map(([id, n]) =>
+    `<g><circle cx="${n.x}" cy="${n.y}" r="26" fill="var(--bg)" stroke="var(--accent)" stroke-width="3"/>
+     <text x="${n.x}" y="${n.y + 4}" text-anchor="middle" fill="var(--text)" font-size="12" font-family="ui-monospace,monospace" font-weight="600">${esc(n.label)}</text></g>`
+  ).join("");
+  const edges = []; const particles = [];
+  for (let i = 0; i < flow.length - 1; i++) {
+    const from = nodeMap[flow[i]], to = nodeMap[flow[i + 1]];
+    if (!from || !to) continue;
+    const pid = `p${Math.random().toString(36).slice(2, 8)}`;
+    edges.push(`<path id="${pid}" d="M${from.x + 26},${from.y} L${to.x - 26},${to.y}" stroke="var(--accent)" stroke-width="2" fill="none" opacity="0.5"/>`);
+    particles.push(`<circle r="8" fill="var(--bash)" filter="drop-shadow(0 0 8px var(--bash))">
+      <animateMotion dur="${duration}ms" begin="${(duration * i) / Math.max(1, flow.length - 1)}ms" repeatCount="indefinite">
+        <mpath href="#${pid}"/></animateMotion></circle>`);
+  }
+  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" style="background:var(--bg); border-radius:8px;">${edges.join("")}${circles}${particles.join("")}</svg>`;
+}
+function renderVizJourney(d) {
+  const stages = d.stages;
+  const blocks = stages.map((s, i) => {
+    const drop = Number(s.drop || 0);
+    const dc = drop > 20 ? "var(--danger)" : drop > 5 ? "var(--user)" : "var(--bash)";
+    return `<div style="background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:14px; min-width:110px; text-align:center; flex:1;">
+      <div style="font-size:24px;">${esc(s.icon || "○")}</div>
+      <div style="font-size:13px; color:var(--text); font-weight:700; margin-top:6px;">${esc(s.name)}</div>
+      ${drop > 0 ? `<div style="font-size:11px; color:${dc}; margin-top:4px; font-weight:600;">↓ ${drop}% 이탈</div>` : ""}
+    </div>` + (i < stages.length - 1 ? `<div style="color:var(--dim); font-size:16px; align-self:center;">→</div>` : "");
+  }).join("");
+  return `<div style="font-size:12px; color:var(--muted); margin-bottom:10px;">👤 ${esc(d.persona || "사용자")}</div>
+    <div style="display:flex; gap:6px; align-items:stretch; flex-wrap:wrap;">${blocks}</div>`;
+}
+function renderVizArch(d) {
+  const layers = d.layers, active = d.active_layer || "";
+  return layers.map(L => {
+    const isA = L.name === active;
+    const cs = L.components.map(c => `<span style="display:inline-block; background:var(--panel); padding:5px 12px; border-radius:6px; font-size:13px; margin:3px;">${esc(c)}</span>`).join("");
+    return `<div style="background:var(--bg); border:1px solid ${isA ? 'var(--accent)' : 'var(--border)'}; border-radius:8px; padding:12px 16px;">
+      <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; font-weight:700;">▓ ${esc(L.name)}${isA ? ' ⚡ active' : ''}</div>
+      <div>${cs}</div></div>`;
+  }).join('<div style="text-align:center; color:var(--dim); padding:4px 0; font-size:16px;">▼</div>');
+}
+function renderVizWhatif(d) {
+  const renderSide = (items, isAfter) => items.map(it => {
+    const ch = it.change || "neutral";
+    const c = ch === "good" ? "var(--bash)" : ch === "bad" ? "var(--danger)" : "var(--muted)";
+    const sg = isAfter ? (ch === "good" ? "✓ " : ch === "bad" ? "⚠️ " : "") : "";
+    return `<div style="padding:7px 0; border-bottom:1px solid var(--border);">
+      <span style="color:var(--muted); font-size:12px;">${esc(it.k)}</span>
+      <span style="color:${c}; font-weight:700; font-size:14px;"> → ${sg}${esc(it.v)}</span></div>`;
+  }).join("");
+  return `${d.title ? `<div style="font-weight:700; margin-bottom:10px; font-size:15px;">${esc(d.title)}</div>` : ""}
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+      <div><div style="font-size:11px; color:var(--muted); text-transform:uppercase; margin-bottom:6px; font-weight:700;">현재</div>${renderSide(d.current, false)}</div>
+      <div><div style="font-size:11px; color:var(--accent); text-transform:uppercase; margin-bottom:6px; font-weight:700;">변경 후</div>${renderSide(d.after, true)}</div>
+    </div>${d.recommendation ? `<div style="margin-top:14px; padding:10px 14px; background:rgba(88,166,255,0.08); border:1px solid var(--accent); border-radius:8px; color:var(--accent); font-size:13px;">💡 ${esc(d.recommendation)}</div>` : ""}`;
+}
+
+// ───── Chart.js 공통 옵션 (dark theme) ─────
+const CHART_COLORS = ["#58a6ff", "#3fb950", "#f78166", "#d29922", "#a371f7", "#db61a2", "#f85149"];
+const CHART_DEFAULTS = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: { legend: { labels: { color: "#e6edf3", font: { size: 12 } } } },
+  scales: {
+    x: { ticks: { color: "#8b949e" }, grid: { color: "#30363d" } },
+    y: { ticks: { color: "#8b949e" }, grid: { color: "#30363d" } }
+  }
+};
+
+function renderVizTimeseries(canvasId, d) {
+  const ctx = document.getElementById(canvasId);
+  const series = (d.series || []).map((s, i) => ({
+    label: s.label || `series ${i+1}`,
+    data: s.values || [],
+    borderColor: s.color || CHART_COLORS[i % CHART_COLORS.length],
+    backgroundColor: (s.color || CHART_COLORS[i % CHART_COLORS.length]) + "33",
+    tension: 0.3, fill: true, borderWidth: 2,
+  }));
+  new Chart(ctx, { type: "line", data: { labels: d.labels || [], datasets: series },
+    options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins,
+      title: { display: !!d.title, text: d.title || "", color: "#e6edf3", font: { size: 14, weight: "600" } } } } });
+}
+
+function renderVizBar(canvasId, d) {
+  const ctx = document.getElementById(canvasId);
+  let datasets;
+  if (d.series) {
+    datasets = d.series.map((s, i) => ({ label: s.label, data: s.values,
+      backgroundColor: s.color || CHART_COLORS[i % CHART_COLORS.length] }));
+  } else {
+    datasets = [{ label: d.title || "값", data: d.values || [],
+      backgroundColor: (d.labels || []).map((_, i) => CHART_COLORS[i % CHART_COLORS.length]) }];
+  }
+  new Chart(ctx, { type: d.horizontal ? "bar" : "bar",
+    data: { labels: d.labels || [], datasets },
+    options: { ...CHART_DEFAULTS, indexAxis: d.horizontal ? "y" : "x",
+      plugins: { ...CHART_DEFAULTS.plugins,
+        title: { display: !!d.title, text: d.title || "", color: "#e6edf3", font: { size: 14, weight: "600" } } } } });
+}
+
+function renderVizFunnel(d) {
+  const stages = d.stages || [];
+  if (!stages.length) return `<div style="color:var(--muted);">funnel 데이터 없음</div>`;
+  const maxVal = Math.max(...stages.map(s => Number(s.value) || 0));
+  const w = 700, sh = 60, gap = 6;
+  const rows = stages.map((s, i) => {
+    const v = Number(s.value) || 0;
+    const pct = maxVal > 0 ? v / maxVal : 0;
+    const bw = Math.max(120, pct * (w - 200));
+    const x = (w - bw) / 2;
+    const y = i * (sh + gap) + 10;
+    const conv = i > 0 ? ((v / (Number(stages[i-1].value) || 1)) * 100).toFixed(1) : "100";
+    const drop = i > 0 ? (100 - parseFloat(conv)).toFixed(1) : "0";
+    const color = CHART_COLORS[i % CHART_COLORS.length];
+    return `<g>
+      <polygon points="${x},${y} ${x+bw},${y} ${x+bw-15},${y+sh} ${x+15},${y+sh}" fill="${color}" opacity="0.8"/>
+      <text x="${w/2}" y="${y+sh/2+5}" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">${s.name}: ${v.toLocaleString()}</text>
+      ${i > 0 ? `<text x="${w-10}" y="${y+sh/2+5}" text-anchor="end" fill="var(--muted)" font-size="11">${conv}% (-${drop}%)</text>` : ""}
+    </g>`;
+  }).join("");
+  const h = stages.length * (sh + gap) + 20;
+  return `${d.title ? `<div style="text-align:center; font-weight:700; margin-bottom:8px;">${esc(d.title)}</div>` : ""}
+    <svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" style="background:var(--bg); border-radius:8px;">${rows}</svg>`;
+}
+
+function renderVizHeatmap(d) {
+  const labelsX = d.labels_x || [], labelsY = d.labels_y || [], matrix = d.matrix || [];
+  if (!labelsX.length || !labelsY.length || !matrix.length) return `<div style="color:var(--muted);">heatmap 데이터 없음</div>`;
+  let allVals = []; matrix.forEach(row => row.forEach(v => allVals.push(Number(v) || 0)));
+  const max = Math.max(...allVals), min = Math.min(...allVals), range = max - min || 1;
+  const cellW = 60, cellH = 36, padL = 100, padT = 40;
+  const w = padL + labelsX.length * cellW + 20;
+  const h = padT + labelsY.length * cellH + 20;
+  const colorFor = (v) => {
+    const t = ((Number(v) || 0) - min) / range;
+    const r = Math.round(13 + t * 235), g = Math.round(20 + t * 80), b = Math.round(60 - t * 50);
+    return `rgb(${Math.min(255,r)}, ${Math.max(0,g)}, ${Math.min(255,b)})`;
+  };
+  const xLabels = labelsX.map((l, i) => `<text x="${padL + i*cellW + cellW/2}" y="${padT-8}" text-anchor="middle" fill="var(--muted)" font-size="11">${esc(l)}</text>`).join("");
+  const yLabels = labelsY.map((l, i) => `<text x="${padL-10}" y="${padT + i*cellH + cellH/2 + 4}" text-anchor="end" fill="var(--muted)" font-size="11">${esc(l)}</text>`).join("");
+  const cells = matrix.map((row, ri) => row.map((v, ci) => {
+    const val = Number(v) || 0;
+    return `<g><rect x="${padL + ci*cellW}" y="${padT + ri*cellH}" width="${cellW-2}" height="${cellH-2}" rx="3" fill="${colorFor(val)}"/>
+      <text x="${padL + ci*cellW + cellW/2}" y="${padT + ri*cellH + cellH/2 + 4}" text-anchor="middle" fill="${val > (min + range*0.5) ? '#fff' : 'rgba(255,255,255,0.7)'}" font-size="10" font-weight="600">${esc(String(val))}</text></g>`;
+  }).join("")).join("");
+  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" style="background:var(--bg); border-radius:8px;">${xLabels}${yLabels}${cells}</svg>
+    ${d.title ? `<div style="text-align:center; color:var(--muted); font-size:12px; margin-top:6px;">${esc(d.title)} (min=${min}, max=${max})</div>` : ""}`;
+}
+
+function renderVizKanban(d) {
+  const columns = d.columns || [];
+  if (!columns.length) return `<div style="color:var(--muted);">kanban 데이터 없음</div>`;
+  const colorMap = { todo: "var(--dim)", doing: "var(--accent)", done: "var(--bash)", blocked: "var(--danger)", backlog: "var(--user)" };
+  const cols = columns.map(col => {
+    const status = (col.name || "").toLowerCase();
+    const c = colorMap[status] || colorMap[(col.status || "").toLowerCase()] || "var(--muted)";
+    const cards = (col.cards || []).map(card => {
+      const tags = (card.tags || []).map(t => `<span style="display:inline-block; background:var(--panel); color:var(--accent); padding:2px 7px; border-radius:4px; font-size:10px; margin-right:4px; margin-top:4px;">${esc(t)}</span>`).join("");
+      return `<div style="background:var(--bg); border:1px solid var(--border); border-left:3px solid ${c}; border-radius:6px; padding:10px 12px; margin-bottom:8px;">
+        <div style="font-size:13px; color:var(--text); font-weight:600; line-height:1.4;">${esc(card.title || "")}</div>
+        ${card.assignee ? `<div style="font-size:11px; color:var(--muted); margin-top:4px;">👤 ${esc(card.assignee)}</div>` : ""}
+        ${tags ? `<div>${tags}</div>` : ""}</div>`;
+    }).join("");
+    return `<div style="flex:1; min-width:200px; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px;">
+      <div style="font-size:12px; font-weight:700; color:${c}; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; display:flex; justify-content:space-between;">
+        <span>${esc(col.name || "")}</span>
+        <span style="background:${c}33; color:${c}; padding:2px 7px; border-radius:10px; font-size:11px;">${(col.cards || []).length}</span>
+      </div>${cards || `<div style="color:var(--dim); font-size:11px; text-align:center; padding:20px;">(비어있음)</div>`}</div>`;
+  }).join("");
+  return `<div style="display:flex; gap:10px; overflow-x:auto;">${cols}</div>
+    ${d.title ? `<div style="text-align:center; color:var(--muted); font-size:12px; margin-top:8px;">${esc(d.title)}</div>` : ""}`;
+}
+
+function renderVizWaterfall(d) {
+  const spans = d.spans || [];
+  if (!spans.length) return `<div style="color:var(--muted);">waterfall 데이터 없음</div>`;
+  const totalMs = Math.max(...spans.map(s => (s.start_ms || 0) + (s.duration_ms || 0)));
+  const rowH = 32, labelW = 200, barAreaW = 500, padTop = 20;
+  const w = labelW + barAreaW + 100;
+  const h = spans.length * rowH + padTop + 30;
+  const rows = spans.map((s, i) => {
+    const start = Number(s.start_ms) || 0, dur = Number(s.duration_ms) || 0;
+    const x = labelW + (start / totalMs) * barAreaW;
+    const bw = Math.max(2, (dur / totalMs) * barAreaW);
+    const color = s.color || CHART_COLORS[i % CHART_COLORS.length];
+    return `<g>
+      <text x="${labelW - 8}" y="${padTop + i*rowH + 18}" text-anchor="end" fill="var(--text)" font-size="11.5" font-family="ui-monospace,monospace">${esc(s.name || "")}</text>
+      ${s.service ? `<text x="${labelW - 8}" y="${padTop + i*rowH + 30}" text-anchor="end" fill="var(--muted)" font-size="9.5">${esc(s.service)}</text>` : ""}
+      <rect x="${x}" y="${padTop + i*rowH + 6}" width="${bw}" height="20" rx="3" fill="${color}" opacity="0.8"/>
+      <text x="${x + bw + 6}" y="${padTop + i*rowH + 20}" fill="var(--muted)" font-size="10.5" font-family="ui-monospace,monospace">${dur}ms</text></g>`;
+  }).join("");
+  const ticks = [0, totalMs*0.25, totalMs*0.5, totalMs*0.75, totalMs];
+  const tickEls = ticks.map(t => {
+    const x = labelW + (t / totalMs) * barAreaW;
+    return `<line x1="${x}" y1="${padTop-4}" x2="${x}" y2="${h-20}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="2,3"/>
+      <text x="${x}" y="${h-6}" text-anchor="middle" fill="var(--dim)" font-size="10" font-family="ui-monospace,monospace">${Math.round(t)}ms</text>`;
+  }).join("");
+  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" style="background:var(--bg); border-radius:8px;">${tickEls}${rows}</svg>
+    ${d.title ? `<div style="text-align:center; color:var(--muted); font-size:12px; margin-top:6px;">${esc(d.title)} (total ${totalMs}ms, ${spans.length} spans)</div>` : ""}`;
+}
+
+function renderVizCohort(d) {
+  const cohorts = d.cohorts || [];
+  if (!cohorts.length) return `<div style="color:var(--muted);">cohort 데이터 없음</div>`;
+  const maxWeeks = Math.max(...cohorts.map(c => (c.retention || []).length));
+  const cellW = 56, cellH = 36, padL = 130, padT = 50;
+  const w = padL + maxWeeks*cellW + 20;
+  const h = padT + cohorts.length*cellH + 30;
+  const weekHeaders = Array.from({length: maxWeeks}, (_, i) =>
+    `<text x="${padL + i*cellW + cellW/2}" y="${padT-16}" text-anchor="middle" fill="var(--muted)" font-size="11" font-weight="600">W${i}</text>`).join("");
+  const colorFor = (pct) => {
+    const t = Math.min(1, Math.max(0, pct/100));
+    const r = Math.round(13 + (1-t)*240), g = Math.round(20 + t*165), b = Math.round(45 + t*35);
+    return `rgb(${r}, ${g}, ${b})`;
+  };
+  const rows = cohorts.map((c, i) => {
+    const initial = Number(c.initial) || 100;
+    const label = `<text x="${padL-10}" y="${padT + i*cellH + cellH/2 - 4}" text-anchor="end" fill="var(--text)" font-size="12" font-weight="600">${esc(c.label || "")}</text>
+      <text x="${padL-10}" y="${padT + i*cellH + cellH/2 + 12}" text-anchor="end" fill="var(--muted)" font-size="10">n=${initial}</text>`;
+    const cells = (c.retention || []).map((val, wi) => {
+      const pct = initial > 0 ? (val/initial)*100 : 0;
+      return `<g><rect x="${padL + wi*cellW + 2}" y="${padT + i*cellH + 2}" width="${cellW-4}" height="${cellH-4}" rx="4" fill="${colorFor(pct)}"/>
+        <text x="${padL + wi*cellW + cellW/2}" y="${padT + i*cellH + cellH/2 - 2}" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">${pct.toFixed(0)}%</text>
+        <text x="${padL + wi*cellW + cellW/2}" y="${padT + i*cellH + cellH/2 + 11}" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="9">${val}</text></g>`;
+    }).join("");
+    return label + cells;
+  }).join("");
+  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" style="background:var(--bg); border-radius:8px;">${weekHeaders}${rows}</svg>
+    ${d.title ? `<div style="text-align:center; color:var(--muted); font-size:12px; margin-top:6px;">${esc(d.title)}</div>` : ""}`;
+}
+
+// ───── Phase 5 렌더러 (concept) ─────
+function renderVizConcept(d) {
+  if (!d.concept) return `<div style="color:var(--muted);">concept 데이터 없음</div>`;
+  const cmp = d.comparison || {}, wo = cmp.without || {}, w_ = cmp.with || {};
+  const tr = d.tradeoffs || {}, an = d.analogy || {};
+  const stepsList = (arr) => (arr || []).map((s, i) =>
+    `<div style="display:flex; gap:8px; align-items:center; padding:4px 0; font-size:13px;">
+      <span style="background:var(--panel); color:var(--muted); width:18px; height:18px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0;">${i+1}</span>
+      <span>${esc(s)}</span></div>`).join("");
+  const pros = (tr.pros || []).map(p => `<div style="padding:5px 0; font-size:13px; display:flex; gap:7px;"><span style="color:var(--bash); font-weight:700;">✓</span><span>${esc(p)}</span></div>`).join("");
+  const cons = (tr.cons || []).map(c => `<div style="padding:5px 0; font-size:13px; display:flex; gap:7px;"><span style="color:var(--danger); font-weight:700;">✗</span><span>${esc(c)}</span></div>`).join("");
+  return `<div style="background:var(--bg); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+    <div style="background:linear-gradient(135deg, rgba(88,166,255,0.12), rgba(63,185,80,0.06)); padding:20px 24px; border-bottom:1px solid var(--border);">
+      <div style="font-size:22px; font-weight:800; color:var(--accent); letter-spacing:-0.3px;">${esc(d.concept)}</div>
+      ${d.tagline ? `<div style="font-size:14px; color:var(--text); margin-top:6px; line-height:1.5;">${esc(d.tagline)}</div>` : ""}
+      ${an.name ? `<div style="margin-top:12px; padding:10px 14px; background:rgba(210,153,34,0.1); border:1px solid var(--user); border-radius:8px; font-size:13px; color:var(--text); display:inline-flex; align-items:center; gap:8px;">
+        <span style="font-size:18px;">${esc(an.icon || "💡")}</span>
+        <span><strong style="color:var(--user);">비유:</strong> ${esc(an.name)}</span>
+      </div>` : ""}
+    </div>
+    ${(wo.label || w_.label) ? `<div style="display:grid; grid-template-columns:1fr 1fr; gap:0; border-bottom:1px solid var(--border);">
+      <div style="padding:18px 22px; border-right:1px solid var(--border); background:rgba(248,81,73,0.04);">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <span style="font-size:28px;">${esc(wo.icon || "🗄️")}</span>
+          <div>
+            <div style="font-size:11px; color:var(--danger); text-transform:uppercase; letter-spacing:1px; font-weight:700;">안 쓸 때</div>
+            <div style="font-size:14px; font-weight:700; color:var(--text);">${esc(wo.label || "")}</div>
+          </div>
+        </div>
+        ${stepsList(wo.steps)}
+        ${wo.metric ? `<div style="margin-top:10px; padding:6px 12px; background:var(--panel); border-radius:6px; font-size:13px; color:var(--danger); font-weight:700; display:inline-block;">⏱ ${esc(wo.metric)}</div>` : ""}
+      </div>
+      <div style="padding:18px 22px; background:rgba(63,185,80,0.04);">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <span style="font-size:28px;">${esc(w_.icon || "📝")}</span>
+          <div>
+            <div style="font-size:11px; color:var(--bash); text-transform:uppercase; letter-spacing:1px; font-weight:700;">쓸 때</div>
+            <div style="font-size:14px; font-weight:700; color:var(--text);">${esc(w_.label || "")}</div>
+          </div>
+        </div>
+        ${stepsList(w_.steps)}
+        ${w_.metric ? `<div style="margin-top:10px; padding:6px 12px; background:var(--panel); border-radius:6px; font-size:13px; color:var(--bash); font-weight:700; display:inline-block;">⏱ ${esc(w_.metric)}</div>` : ""}
+      </div>
+    </div>` : ""}
+    ${(pros || cons) ? `<div style="display:grid; grid-template-columns:1fr 1fr; gap:0; border-bottom:1px solid var(--border);">
+      <div style="padding:14px 22px; border-right:1px solid var(--border);">
+        <div style="font-size:11px; color:var(--bash); text-transform:uppercase; letter-spacing:1px; font-weight:700; margin-bottom:8px;">장점</div>
+        ${pros || `<div style="color:var(--dim); font-size:12px;">—</div>`}
+      </div>
+      <div style="padding:14px 22px;">
+        <div style="font-size:11px; color:var(--danger); text-transform:uppercase; letter-spacing:1px; font-weight:700; margin-bottom:8px;">단점</div>
+        ${cons || `<div style="color:var(--dim); font-size:12px;">—</div>`}
+      </div>
+    </div>` : ""}
+    ${d.real_world ? `<div style="padding:14px 22px; background:var(--panel);">
+      <span style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; font-weight:700;">💼 실무 사용처</span>
+      <span style="font-size:13px; color:var(--text); margin-left:10px;">${esc(d.real_world)}</span>
+    </div>` : ""}
+  </div>`;
+}
+
+// ───── Phase 4 렌더러 ─────
+function renderVizCrud(d) {
+  const entities = d.entities || [], actors = d.actors || [], matrix = d.matrix || [];
+  if (!entities.length || !actors.length) return `<div style="color:var(--muted);">crud 데이터 없음</div>`;
+  const cellW = 130, cellH = 44, padL = 130, padT = 50;
+  const w = padL + actors.length * cellW + 20;
+  const h = padT + entities.length * cellH + 30;
+  const actionColors = { C: "#3fb950", R: "#58a6ff", U: "#d29922", D: "#f85149" };
+  const headers = actors.map((a, i) =>
+    `<text x="${padL + i*cellW + cellW/2}" y="${padT-16}" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">${esc(a)}</text>`
+  ).join("");
+  const rows = entities.map((e, ri) => {
+    const label = `<text x="${padL-12}" y="${padT + ri*cellH + cellH/2 + 5}" text-anchor="end" fill="var(--text)" font-size="13" font-weight="700" font-family="ui-monospace,monospace">${esc(e)}</text>`;
+    const cells = actors.map((_, ci) => {
+      const cell = (matrix[ri] || [])[ci];
+      const actions = Array.isArray(cell) ? cell : (cell && cell.actions) ? cell.actions : [];
+      const x = padL + ci*cellW, y = padT + ri*cellH;
+      if (!actions.length) {
+        return `<g><rect x="${x+3}" y="${y+3}" width="${cellW-6}" height="${cellH-6}" rx="4" fill="var(--bg)" stroke="var(--border)" stroke-dasharray="3,3"/>
+          <text x="${x+cellW/2}" y="${y+cellH/2+5}" text-anchor="middle" fill="var(--dim)" font-size="14">—</text></g>`;
+      }
+      const bgColor = actions.length === 4 ? "rgba(63,185,80,0.12)" : "var(--bg)";
+      const badges = ["C","R","U","D"].map((ac, i) => {
+        const has = actions.includes(ac);
+        const bw = (cellW - 20) / 4;
+        const bx = x + 10 + i*bw;
+        const by = y + cellH/2 - 11;
+        if (has) {
+          return `<g><rect x="${bx+2}" y="${by}" width="${bw-4}" height="22" rx="4" fill="${actionColors[ac]}"/>
+            <text x="${bx+bw/2}" y="${by+15}" text-anchor="middle" fill="#fff" font-size="12" font-weight="800">${ac}</text></g>`;
+        } else {
+          return `<text x="${bx+bw/2}" y="${by+15}" text-anchor="middle" fill="var(--dim)" font-size="11" opacity="0.4">${ac}</text>`;
+        }
+      }).join("");
+      return `<g><rect x="${x+3}" y="${y+3}" width="${cellW-6}" height="${cellH-6}" rx="4" fill="${bgColor}" stroke="var(--border)"/>${badges}</g>`;
+    }).join("");
+    return label + cells;
+  }).join("");
+  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" style="background:var(--bg); border-radius:8px;">${headers}${rows}</svg>
+    <div style="display:flex; gap:14px; justify-content:center; margin-top:8px; font-size:11px;">
+      <span style="color:#3fb950;">■ C(reate)</span><span style="color:#58a6ff;">■ R(ead)</span>
+      <span style="color:#d29922;">■ U(pdate)</span><span style="color:#f85149;">■ D(elete)</span>
+    </div>
+    ${d.title ? `<div style="text-align:center; color:var(--muted); font-size:12px; margin-top:4px;">${esc(d.title)}</div>` : ""}`;
+}
+
+function renderVizUserflow(d) {
+  const nodes = d.nodes || [], edges = d.edges || [];
+  if (!nodes.length) return `<div style="color:var(--muted);">userflow 데이터 없음</div>`;
+  const layers = {}; const layerOf = {}; let maxLayer = 0;
+  const visit = (id, layer) => {
+    if (layerOf[id] !== undefined) return;
+    layerOf[id] = layer; maxLayer = Math.max(maxLayer, layer);
+    edges.filter(e => e.from === id).forEach(e => visit(e.to, layer + 1));
+  };
+  const startNode = nodes.find(n => n.kind === "start") || nodes[0];
+  visit(startNode.id, 0);
+  nodes.forEach(n => { if (layerOf[n.id] === undefined) layerOf[n.id] = maxLayer + 1; });
+  maxLayer = Math.max(...Object.values(layerOf));
+  for (const id in layerOf) { const L = layerOf[id]; (layers[L] = layers[L] || []).push(id); }
+  const nodeW = 130, nodeH = 50, vGap = 90, hGap = 50;
+  const maxCols = Math.max(...Object.values(layers).map(arr => arr.length));
+  const w = Math.max(800, maxCols * (nodeW + hGap) + 80);
+  const h = (maxLayer + 1) * (nodeH + vGap) + 60;
+  const pos = {};
+  Object.entries(layers).forEach(([L, ids]) => {
+    const layer = Number(L);
+    const totalW = ids.length * (nodeW + hGap) - hGap;
+    const startX = (w - totalW) / 2;
+    ids.forEach((id, i) => { pos[id] = { x: startX + i * (nodeW + hGap), y: 30 + layer * (nodeH + vGap) }; });
+  });
+  const colorFor = (kind) => ({
+    start: { fill: "rgba(63,185,80,0.18)", stroke: "var(--bash)" },
+    end: { fill: "rgba(248,81,73,0.18)", stroke: "var(--danger)" },
+    decision: { fill: "rgba(210,153,34,0.15)", stroke: "var(--user)" },
+    screen: { fill: "var(--panel)", stroke: "var(--accent)" },
+    action: { fill: "rgba(163,113,247,0.15)", stroke: "var(--search)" },
+  }[kind] || { fill: "var(--panel)", stroke: "var(--border)" });
+  const nodeEls = nodes.map(n => {
+    const p = pos[n.id]; if (!p) return "";
+    const c = colorFor(n.kind);
+    if (n.kind === "decision") {
+      const cx = p.x + nodeW/2, cy = p.y + nodeH/2;
+      const dw = nodeW + 10, dh = nodeH + 4;
+      const pts = `${cx},${cy-dh/2} ${cx+dw/2},${cy} ${cx},${cy+dh/2} ${cx-dw/2},${cy}`;
+      return `<g><polygon points="${pts}" fill="${c.fill}" stroke="${c.stroke}" stroke-width="2"/>
+        <text x="${cx}" y="${cy+5}" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">${esc(n.label || n.id)}</text></g>`;
+    }
+    const rx = n.kind === "start" || n.kind === "end" ? 22 : 6;
+    return `<g><rect x="${p.x}" y="${p.y}" width="${nodeW}" height="${nodeH}" rx="${rx}" fill="${c.fill}" stroke="${c.stroke}" stroke-width="2"/>
+      <text x="${p.x + nodeW/2}" y="${p.y + nodeH/2 + 5}" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="600">${esc(n.label || n.id)}</text></g>`;
+  }).join("");
+  const edgeEls = edges.map(e => {
+    const a = pos[e.from], b = pos[e.to]; if (!a || !b) return "";
+    const x1 = a.x + nodeW/2, y1 = a.y + nodeH;
+    const x2 = b.x + nodeW/2, y2 = b.y;
+    const mid_y = (y1 + y2) / 2;
+    const label = e.label ? `<text x="${(x1+x2)/2 + 8}" y="${mid_y + 4}" fill="var(--muted)" font-size="10.5" font-weight="600">${esc(e.label)}</text>` : "";
+    return `<g><path d="M${x1},${y1} C${x1},${mid_y} ${x2},${mid_y} ${x2},${y2}" stroke="var(--accent)" stroke-width="1.8" fill="none" opacity="0.6" marker-end="url(#uf-arr)"/>${label}</g>`;
+  }).join("");
+  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" style="background:var(--bg); border-radius:8px;">
+    <defs><marker id="uf-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" opacity="0.7"/></marker></defs>
+    ${edgeEls}${nodeEls}</svg>
+    ${d.title ? `<div style="text-align:center; color:var(--muted); font-size:12px; margin-top:6px;">${esc(d.title)}</div>` : ""}`;
+}
+
+function renderVizScreenmap(d) {
+  const screens = d.screens || [], transitions = d.transitions || [];
+  if (!screens.length) return `<div style="color:var(--muted);">screenmap 데이터 없음</div>`;
+  const sW = 180, sH = 130, padding = 30;
+  const xs = screens.map(s => Number(s.x) || 0);
+  const ys = screens.map(s => Number(s.y) || 0);
+  const minX = Math.min(...xs), minY = Math.min(...ys);
+  const screensNorm = screens.map(s => ({
+    ...s,
+    x: ((Number(s.x) || 0) - minX) * (sW + 60) + padding,
+    y: ((Number(s.y) || 0) - minY) * (sH + 70) + padding,
+  }));
+  const w = Math.max(800, Math.max(...screensNorm.map(s => s.x)) + sW + padding);
+  const h = Math.max(400, Math.max(...screensNorm.map(s => s.y)) + sH + padding);
+  const screenById = {};
+  screensNorm.forEach(s => { screenById[s.id] = s; });
+  const screenEls = screensNorm.map(s => {
+    const items = (s.items || []).map((it, i) =>
+      `<rect x="${s.x + 12}" y="${s.y + 38 + i*16}" width="${sW - 24}" height="11" rx="2" fill="var(--bg)" stroke="var(--border)"/>
+       <text x="${s.x + 18}" y="${s.y + 47 + i*16}" fill="var(--muted)" font-size="9.5">${esc(it)}</text>`
+    ).join("");
+    return `<g>
+      <rect x="${s.x}" y="${s.y}" width="${sW}" height="${sH}" rx="8" fill="var(--panel)" stroke="var(--accent)" stroke-width="2"/>
+      <rect x="${s.x}" y="${s.y}" width="${sW}" height="26" rx="8" fill="var(--accent)" opacity="0.15"/>
+      <text x="${s.x + sW/2}" y="${s.y + 18}" text-anchor="middle" fill="var(--accent)" font-size="12" font-weight="700">${esc(s.title || s.id)}</text>
+      ${items}</g>`;
+  }).join("");
+  const arrows = transitions.map(t => {
+    const a = screenById[t.from], b = screenById[t.to]; if (!a || !b) return "";
+    const ax = a.x + sW/2, ay = a.y + sH/2;
+    const bx = b.x + sW/2, by = b.y + sH/2;
+    const dx = bx - ax, dy = by - ay, dist = Math.sqrt(dx*dx + dy*dy);
+    const startX = ax + (dx/dist) * (sW/2 + 5);
+    const startY = ay + (dy/dist) * (sH/2 + 5);
+    const endX = bx - (dx/dist) * (sW/2 + 8);
+    const endY = by - (dy/dist) * (sH/2 + 8);
+    const label = t.action ? `<text x="${(startX+endX)/2}" y="${(startY+endY)/2 - 6}" text-anchor="middle" fill="var(--user)" font-size="10.5" font-weight="700">${esc(t.action)}</text>` : "";
+    return `<g><line x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}" stroke="var(--user)" stroke-width="2" marker-end="url(#sm-arr)" opacity="0.8"/>${label}</g>`;
+  }).join("");
+  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" style="background:var(--bg); border-radius:8px;">
+    <defs><marker id="sm-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--user)"/></marker></defs>
+    ${arrows}${screenEls}</svg>
+    ${d.title ? `<div style="text-align:center; color:var(--muted); font-size:12px; margin-top:6px;">${esc(d.title)}</div>` : ""}`;
+}
+
+function renderVizDepgraph(d) {
+  const services = d.services || [], deps = d.deps || [];
+  if (!services.length) return `<div style="color:var(--muted);">depgraph 데이터 없음</div>`;
+  const kindColor = {
+    frontend: "#58a6ff", api: "#3fb950", service: "#a371f7",
+    db: "#d29922", cache: "#f78166", cdn: "#db61a2",
+    queue: "#58a6ff", external: "#8b949e",
+  };
+  const incoming = {};
+  services.forEach(s => { incoming[s.id] = 0; });
+  deps.forEach(d => { if (incoming[d.to] !== undefined) incoming[d.to]++; });
+  const layerOf = {};
+  const assignLayer = (id, layer = 0, visited = new Set()) => {
+    if (visited.has(id)) return;
+    visited.add(id);
+    layerOf[id] = Math.max(layerOf[id] || 0, layer);
+    deps.filter(d => d.from === id).forEach(d => assignLayer(d.to, layer + 1, visited));
+  };
+  services.filter(s => incoming[s.id] === 0).forEach(s => assignLayer(s.id));
+  services.forEach(s => { if (layerOf[s.id] === undefined) layerOf[s.id] = 0; });
+  const maxL = Math.max(...Object.values(layerOf));
+  const layers = {};
+  Object.entries(layerOf).forEach(([id, L]) => { (layers[L] = layers[L] || []).push(id); });
+  const nodeW = 120, nodeH = 50, vGap = 80, hGap = 30;
+  const maxCols = Math.max(...Object.values(layers).map(a => a.length));
+  const w = Math.max(800, maxCols * (nodeW + hGap) + 80);
+  const h = (maxL + 1) * (nodeH + vGap) + 40;
+  const pos = {};
+  Object.entries(layers).forEach(([L, ids]) => {
+    const layer = Number(L);
+    const totalW = ids.length * (nodeW + hGap) - hGap;
+    const startX = (w - totalW) / 2;
+    ids.forEach((id, i) => { pos[id] = { x: startX + i * (nodeW + hGap), y: 20 + layer * (nodeH + vGap) }; });
+  });
+  const nodeEls = services.map(s => {
+    const p = pos[s.id]; if (!p) return "";
+    const c = kindColor[s.kind] || "#8b949e";
+    const kindLabel = s.kind ? s.kind.toUpperCase() : "";
+    return `<g><rect x="${p.x}" y="${p.y}" width="${nodeW}" height="${nodeH}" rx="8" fill="var(--panel)" stroke="${c}" stroke-width="2"/>
+      <rect x="${p.x}" y="${p.y}" width="${nodeW}" height="14" rx="8" fill="${c}" opacity="0.25"/>
+      <text x="${p.x + nodeW/2}" y="${p.y + 11}" text-anchor="middle" fill="${c}" font-size="9" font-weight="700" letter-spacing="0.5">${esc(kindLabel)}</text>
+      <text x="${p.x + nodeW/2}" y="${p.y + 35}" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">${esc(s.label || s.id)}</text></g>`;
+  }).join("");
+  const depEls = deps.map(dep => {
+    const a = pos[dep.from], b = pos[dep.to]; if (!a || !b) return "";
+    const x1 = a.x + nodeW/2, y1 = a.y + nodeH;
+    const x2 = b.x + nodeW/2, y2 = b.y;
+    const sameLayer = layerOf[dep.from] === layerOf[dep.to];
+    const path = sameLayer
+      ? `M${a.x + nodeW},${a.y + nodeH/2} C${a.x + nodeW + 30},${a.y + nodeH/2} ${b.x - 30},${b.y + nodeH/2} ${b.x},${b.y + nodeH/2}`
+      : `M${x1},${y1} C${x1},${(y1+y2)/2} ${x2},${(y1+y2)/2} ${x2},${y2}`;
+    const linkColor = ({ http: "var(--accent)", db: "var(--user)", cache: "var(--edit)", queue: "var(--search)" }[dep.kind]) || "var(--muted)";
+    return `<path d="${path}" stroke="${linkColor}" stroke-width="1.6" fill="none" opacity="0.65" marker-end="url(#dg-arr)"/>`;
+  }).join("");
+  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" style="background:var(--bg); border-radius:8px;">
+    <defs><marker id="dg-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)" opacity="0.8"/></marker></defs>
+    ${depEls}${nodeEls}</svg>
+    ${d.title ? `<div style="text-align:center; color:var(--muted); font-size:12px; margin-top:6px;">${esc(d.title)} — ${services.length} services, ${deps.length} deps</div>` : ""}`;
+}
+
+// ───── 샘플 데이터 ─────
+const SAMPLES = {
+  gauge: {label:"테스트 통과율", value:12, max:15, unit:"통과"},
+  badge: [
+    {label:"✓ 통과", tone:"success"},
+    {label:"⚠️ 경고", tone:"warning"},
+    {label:"❌ 실패", tone:"error"},
+    {label:"ℹ️ 정보", tone:"info"},
+  ],
+  kpi: {kpis:[
+    {label:"MRR", value:"$52K", trend:"up", delta:"+2.3%"},
+    {label:"활성 사용자", value:"1,240", trend:"down", delta:"-0.8%"},
+    {label:"전환율", value:"3.2%", trend:"flat", delta:"변화 없음"},
+    {label:"p95 응답", value:"320ms", trend:"up", delta:"+12ms"},
+  ]},
+  diff: {
+    file:"src/auth/login.py",
+    before:"def verify_password(p, h):\n    return p == h",
+    after:"def verify_password(p, h):\n    import secrets\n    return secrets.compare_digest(p, h)"
+  },
+  table: {
+    headers:["함수", "위치", "호출 수", "타입"],
+    rows:[
+      ["_call_llm_summary", "server.py:235", 8, "async"],
+      ["_get_key", "server.py:172", 6, "async"],
+      ["_broadcast", "server.py:298", 4, "async"],
+      ["renderVizGauge", "index.html:540", 1, "js"],
+    ]
+  },
+  flow: {steps:[
+    {name:"빌드", status:"done"},
+    {name:"테스트", status:"done"},
+    {name:"스테이징 배포", status:"now"},
+    {name:"프로덕션 배포", status:"todo"},
+    {name:"모니터링", status:"todo"},
+  ]},
+  code: {
+    lang:"python",
+    code:"async def main():\n    async with httpx.AsyncClient() as client:\n        resp = await client.get(URL)\n        return resp.json()"
+  },
+  animation: {
+    nodes:[{id:"user",label:"User"},{id:"api",label:"API"},{id:"auth",label:"Auth"},{id:"db",label:"DB"},{id:"cache",label:"Cache"}],
+    flow:["user","api","auth","db","cache","api","user"],
+    duration_ms:3500
+  },
+  journey: {
+    persona:"신규 가입자",
+    stages:[
+      {name:"방문", icon:"👤", drop:0},
+      {name:"가입", icon:"📝", drop:12},
+      {name:"이메일 인증", icon:"📧", drop:8},
+      {name:"결제", icon:"💳", drop:18},
+      {name:"사용", icon:"🎯", drop:0},
+    ]
+  },
+  arch: {
+    layers:[
+      {name:"Frontend", components:["Next.js", "Tailwind", "Cloudflare CDN"]},
+      {name:"API", components:["FastAPI", "Pydantic"]},
+      {name:"Service", components:["Auth", "Payment", "Notification"]},
+      {name:"Data", components:["PostgreSQL", "Redis", "S3"]},
+    ],
+    active_layer:"API"
+  },
+  whatif: {
+    title:"API timeout 5s → 30s 변경 영향",
+    current:[
+      {k:"p95 응답", v:"320ms"},
+      {k:"실패율", v:"2.3%"},
+      {k:"타임아웃/일", v:"12회"},
+      {k:"DB 풀", v:"안전"},
+    ],
+    after:[
+      {k:"p95 응답", v:"380ms", change:"bad"},
+      {k:"실패율", v:"0.8%", change:"good"},
+      {k:"타임아웃/일", v:"2회", change:"good"},
+      {k:"DB 풀", v:"부족 가능", change:"bad"},
+    ],
+    recommendation:"적용 + DB 풀 동시에 늘리기"
+  },
+  // ── Phase 1 ──
+  timeseries: {
+    title:"월별 매출 추세 (단위: 만원)",
+    labels:["1월","2월","3월","4월","5월","6월","7월","8월"],
+    series:[
+      {label:"매출", values:[3200, 3800, 3500, 4200, 5100, 5800, 6500, 7200], color:"#58a6ff"},
+      {label:"비용", values:[2800, 2900, 3100, 3300, 3800, 4200, 4500, 4800], color:"#f78166"},
+    ]
+  },
+  bar: {
+    title:"지역별 신규 사용자 (Q1 2026)",
+    labels:["서울","부산","대구","인천","광주","대전","울산"],
+    values:[12400, 5200, 3100, 2800, 1900, 1700, 1200]
+  },
+  funnel: {
+    title:"가입→결제 전환 깔때기",
+    stages:[
+      {name:"방문", value:10000},
+      {name:"가입 시작", value:4200},
+      {name:"가입 완료", value:3200},
+      {name:"첫 행동", value:2100},
+      {name:"결제", value:680},
+    ]
+  },
+  // ── Phase 2 ──
+  heatmap: {
+    title:"요일×시간대 CPU 사용률 (%)",
+    labels_x:["0시","4시","8시","12시","16시","20시"],
+    labels_y:["월","화","수","목","금"],
+    matrix:[
+      [15, 18, 35, 72, 68, 42],
+      [12, 16, 38, 75, 71, 45],
+      [14, 17, 36, 73, 69, 43],
+      [13, 15, 39, 78, 74, 46],
+      [10, 12, 30, 65, 60, 38],
+    ]
+  },
+  kanban: {
+    title:"viz-core 스프린트",
+    columns:[
+      {name:"TODO", cards:[
+        {title:"showcase에 Phase 1-3 추가", assignee:"daeseon", tags:["docs","UI"]},
+        {title:"외부 에이전트 연동 프로토콜 설계", assignee:"daeseon", tags:["plan"]},
+      ]},
+      {name:"DOING", cards:[
+        {title:"Phase 2/3 viz_kind 4종 구현", assignee:"AI", tags:["dev","priority"]},
+      ]},
+      {name:"DONE", cards:[
+        {title:"Mermaid 통합", assignee:"AI", tags:["dev"]},
+        {title:"파일 watcher", assignee:"AI", tags:["dev"]},
+        {title:"prompt caching", assignee:"AI", tags:["perf"]},
+      ]},
+    ]
+  },
+  // ── Phase 3 ──
+  waterfall: {
+    title:"GET /users/me trace (총 142ms)",
+    spans:[
+      {name:"GET /users/me", service:"gateway", start_ms:0, duration_ms:142, color:"#58a6ff"},
+      {name:"verify_jwt", service:"auth", start_ms:5, duration_ms:18, color:"#a371f7"},
+      {name:"SELECT user", service:"postgres", start_ms:28, duration_ms:48, color:"#3fb950"},
+      {name:"SELECT prefs", service:"postgres", start_ms:79, duration_ms:32, color:"#3fb950"},
+      {name:"GET avatar_url", service:"redis", start_ms:113, duration_ms:6, color:"#f78166"},
+      {name:"serialize", service:"gateway", start_ms:121, duration_ms:14, color:"#58a6ff"},
+    ]
+  },
+  cohort: {
+    title:"월별 가입자 retention (주별)",
+    cohorts:[
+      {label:"2026-01", initial:1000, retention:[1000, 680, 510, 420, 380, 360]},
+      {label:"2026-02", initial:1200, retention:[1200, 850, 660, 540, 480, 450]},
+      {label:"2026-03", initial:1100, retention:[1100, 800, 620, 510, 460]},
+      {label:"2026-04", initial:1400, retention:[1400, 1050, 820, 690]},
+      {label:"2026-05", initial:1600, retention:[1600, 1280, 1050]},
+    ]
+  },
+  // ── Phase 4 ──
+  crud: {
+    title:"e-commerce 권한 매트릭스",
+    entities:["User", "Order", "Payment", "Product", "Review", "Report"],
+    actors:["Guest", "User", "Seller", "Admin"],
+    matrix:[
+      // User
+      [["R"], ["R","U"], [], ["C","R","U","D"]],
+      // Order
+      [[], ["C","R"], ["R","U"], ["C","R","U","D"]],
+      // Payment
+      [[], ["C","R"], ["R"], ["C","R","U","D"]],
+      // Product
+      [["R"], ["R"], ["C","R","U","D"], ["C","R","U","D"]],
+      // Review
+      [["R"], ["C","R","U","D"], ["R"], ["R","D"]],
+      // Report
+      [[], [], ["R"], ["C","R","U","D"]],
+    ]
+  },
+  userflow: {
+    title:"신규 사용자 회원가입 + 결제 흐름",
+    nodes:[
+      {id:"visit", label:"방문", kind:"start"},
+      {id:"loggedin", label:"로그인?", kind:"decision"},
+      {id:"signup", label:"회원가입", kind:"screen"},
+      {id:"home", label:"홈 화면", kind:"screen"},
+      {id:"email_verify", label:"이메일 인증", kind:"action"},
+      {id:"verified", label:"인증 완료?", kind:"decision"},
+      {id:"shop", label:"상품 선택", kind:"screen"},
+      {id:"cart", label:"장바구니", kind:"screen"},
+      {id:"checkout", label:"결제", kind:"screen"},
+      {id:"success", label:"결제 완료", kind:"end"},
+    ],
+    edges:[
+      {from:"visit", to:"loggedin"},
+      {from:"loggedin", to:"signup", label:"NO"},
+      {from:"loggedin", to:"home", label:"YES"},
+      {from:"signup", to:"email_verify"},
+      {from:"email_verify", to:"verified"},
+      {from:"verified", to:"home", label:"OK"},
+      {from:"verified", to:"signup", label:"실패"},
+      {from:"home", to:"shop"},
+      {from:"shop", to:"cart"},
+      {from:"cart", to:"checkout"},
+      {from:"checkout", to:"success"},
+    ]
+  },
+  screenmap: {
+    title:"커머스 앱 화면 구성",
+    screens:[
+      {id:"home", title:"홈", x:0, y:0, items:["로고", "검색 바", "카테고리", "추천 상품 슬라이드"]},
+      {id:"search", title:"검색 결과", x:1, y:0, items:["검색 바", "필터", "상품 그리드", "정렬 옵션"]},
+      {id:"detail", title:"상품 상세", x:2, y:0, items:["이미지", "가격", "옵션", "리뷰", "장바구니 버튼"]},
+      {id:"cart", title:"장바구니", x:2, y:1, items:["상품 목록", "수량 변경", "총액", "결제 버튼"]},
+      {id:"checkout", title:"결제", x:2, y:2, items:["주소", "결제수단", "쿠폰", "결제 확정"]},
+      {id:"profile", title:"마이페이지", x:0, y:1, items:["프로필", "주문 내역", "쿠폰", "로그아웃"]},
+      {id:"orders", title:"주문 내역", x:1, y:1, items:["주문 목록", "상태", "송장 추적"]},
+    ],
+    transitions:[
+      {from:"home", to:"search", action:"검색"},
+      {from:"home", to:"detail", action:"클릭"},
+      {from:"search", to:"detail", action:"클릭"},
+      {from:"detail", to:"cart", action:"담기"},
+      {from:"cart", to:"checkout", action:"결제"},
+      {from:"home", to:"profile", action:"메뉴"},
+      {from:"profile", to:"orders", action:"보기"},
+      {from:"orders", to:"detail", action:"재구매"},
+    ]
+  },
+  // ── Phase 5: concept (병신도 이해) ──
+  conceptCaching: {
+    concept:"캐싱 (Caching)",
+    tagline:"자주 쓰는 정보는 가까이 둬서, DB 까지 매번 안 가게.",
+    analogy:{name:"책상 위 메모지", icon:"📝"},
+    comparison:{
+      without:{
+        icon:"🗄️",
+        label:"DB 까지 매번 감",
+        steps:["사용자 요청","서버에서 DB 호출","디스크 읽기","데이터 가공","응답 전송"],
+        metric:"100ms"
+      },
+      with:{
+        icon:"📝",
+        label:"메모(캐시) 먼저 확인",
+        steps:["사용자 요청","메모 확인 → 있음","즉시 응답"],
+        metric:"1ms"
+      }
+    },
+    tradeoffs:{
+      pros:["100배 빠름","DB 부담 ↓","비용 절감 (DB 호출 ↓)"],
+      cons:["메모리 사용 ↑","오래된 정보 가능성","캐시 무효화 신경써야"]
+    },
+    real_world:"API 응답, 사용자 세션, 자주 보는 페이지, 이미지/CSS"
+  },
+  conceptIndex: {
+    concept:"DB Index",
+    tagline:"백과사전 색인처럼 — 처음부터 뒤지지 말고 색인으로 점프.",
+    analogy:{name:"백과사전 뒷쪽 색인", icon:"📚"},
+    comparison:{
+      without:{
+        icon:"📖",
+        label:"전체 페이지 다 읽기 (Full Scan)",
+        steps:["1페이지부터 차례로","원하는 단어 찾을 때까지","10만 페이지 다 읽음"],
+        metric:"10초"
+      },
+      with:{
+        icon:"🔍",
+        label:"색인 → 페이지 점프",
+        steps:["색인에서 단어 찾기","페이지 번호 보고 점프","해당 페이지만 읽기"],
+        metric:"0.01초"
+      }
+    },
+    tradeoffs:{
+      pros:["1000배 빠른 검색","대량 데이터에서 필수"],
+      cons:["저장 공간 ↑ (색인용 별도 공간)","쓰기/수정 시 색인도 업데이트 → 느려짐","너무 많이 만들면 오히려 손해"]
+    },
+    real_world:"users 테이블의 email/phone 검색, 게시판 created_at 정렬, 검색 기능"
+  },
+  conceptJwt: {
+    concept:"JWT (JSON Web Token)",
+    tagline:"영화관 티켓처럼 — 한 번 발급받으면, 매번 신분증 안 보여줘도 됨.",
+    analogy:{name:"영화관 입장 티켓", icon:"🎫"},
+    comparison:{
+      without:{
+        icon:"🏛️",
+        label:"매번 신분증 확인 (Session)",
+        steps:["사용자 → 서버","서버가 DB 에서 세션 ID 조회","사용자 정보 가져오기","응답"],
+        metric:"매 요청 DB 조회"
+      },
+      with:{
+        icon:"🎫",
+        label:"티켓 한 번에 다 들어있음",
+        steps:["사용자 → 서버 (티켓 첨부)","서버가 티켓 서명만 검증","즉시 응답"],
+        metric:"DB 조회 X"
+      }
+    },
+    tradeoffs:{
+      pros:["서버 메모리 절약 (세션 저장 X)","마이크로서비스간 인증 쉬움","확장성 ↑"],
+      cons:["발급한 티켓 무효화 어려움 (영화관에서 환불 어려운 거랑 비슷)","티켓 안에 정보 들어있어서 크기 ↑","비밀키 노출되면 위조 가능"]
+    },
+    real_world:"OAuth 로그인, API 인증, 마이크로서비스 사이 토큰"
+  },
+  depgraph: {
+    title:"마이크로서비스 의존도",
+    services:[
+      {id:"cdn", label:"CDN", kind:"cdn"},
+      {id:"web", label:"Web App", kind:"frontend"},
+      {id:"mobile", label:"Mobile App", kind:"frontend"},
+      {id:"gateway", label:"API Gateway", kind:"api"},
+      {id:"auth", label:"Auth Service", kind:"service"},
+      {id:"user", label:"User Service", kind:"service"},
+      {id:"order", label:"Order Service", kind:"service"},
+      {id:"payment", label:"Payment Service", kind:"service"},
+      {id:"notify", label:"Notification", kind:"service"},
+      {id:"queue", label:"Event Queue", kind:"queue"},
+      {id:"pgmain", label:"Postgres Main", kind:"db"},
+      {id:"pgorder", label:"Postgres Orders", kind:"db"},
+      {id:"redis", label:"Redis Cache", kind:"cache"},
+      {id:"stripe", label:"Stripe", kind:"external"},
+    ],
+    deps:[
+      {from:"web", to:"cdn", kind:"http"},
+      {from:"mobile", to:"gateway", kind:"http"},
+      {from:"web", to:"gateway", kind:"http"},
+      {from:"gateway", to:"auth", kind:"http"},
+      {from:"gateway", to:"user", kind:"http"},
+      {from:"gateway", to:"order", kind:"http"},
+      {from:"gateway", to:"payment", kind:"http"},
+      {from:"auth", to:"redis", kind:"cache"},
+      {from:"auth", to:"pgmain", kind:"db"},
+      {from:"user", to:"pgmain", kind:"db"},
+      {from:"order", to:"pgorder", kind:"db"},
+      {from:"order", to:"queue", kind:"queue"},
+      {from:"payment", to:"stripe", kind:"http"},
+      {from:"payment", to:"pgorder", kind:"db"},
+      {from:"queue", to:"notify", kind:"queue"},
+    ]
+  },
+};
+
+// 렌더
+document.getElementById("render-gauge").innerHTML = renderVizGauge(SAMPLES.gauge);
+document.getElementById("render-badge").innerHTML = SAMPLES.badge.map(b => renderVizBadge(b)).join("");
+document.getElementById("render-kpi").innerHTML = renderVizKpi(SAMPLES.kpi);
+document.getElementById("render-diff").innerHTML = renderVizDiff(SAMPLES.diff);
+document.getElementById("render-table").innerHTML = renderVizTable(SAMPLES.table);
+document.getElementById("render-flow").innerHTML = renderVizFlow(SAMPLES.flow);
+document.getElementById("render-code").innerHTML = renderVizCode(SAMPLES.code);
+document.getElementById("render-animation").innerHTML = renderVizAnimation(SAMPLES.animation);
+document.getElementById("render-journey").innerHTML = renderVizJourney(SAMPLES.journey);
+document.getElementById("render-arch").innerHTML = renderVizArch(SAMPLES.arch);
+document.getElementById("render-whatif").innerHTML = renderVizWhatif(SAMPLES.whatif);
+
+// ── Phase 1/2/3 렌더 ──
+function renderPhase() {
+  renderVizTimeseries("render-timeseries", SAMPLES.timeseries);
+  renderVizBar("render-bar", SAMPLES.bar);
+  document.getElementById("render-funnel").innerHTML = renderVizFunnel(SAMPLES.funnel);
+  document.getElementById("render-heatmap").innerHTML = renderVizHeatmap(SAMPLES.heatmap);
+  document.getElementById("render-kanban").innerHTML = renderVizKanban(SAMPLES.kanban);
+  document.getElementById("render-waterfall").innerHTML = renderVizWaterfall(SAMPLES.waterfall);
+  document.getElementById("render-cohort").innerHTML = renderVizCohort(SAMPLES.cohort);
+  // Phase 4
+  document.getElementById("render-crud").innerHTML = renderVizCrud(SAMPLES.crud);
+  document.getElementById("render-userflow").innerHTML = renderVizUserflow(SAMPLES.userflow);
+  document.getElementById("render-screenmap").innerHTML = renderVizScreenmap(SAMPLES.screenmap);
+  document.getElementById("render-depgraph").innerHTML = renderVizDepgraph(SAMPLES.depgraph);
+  // Phase 5: concept (3개 — 캐싱/Index/JWT)
+  document.getElementById("render-concept").innerHTML = renderVizConcept(SAMPLES.conceptCaching);
+  document.getElementById("render-concept-index").innerHTML = renderVizConcept(SAMPLES.conceptIndex);
+  document.getElementById("render-concept-jwt").innerHTML = renderVizConcept(SAMPLES.conceptJwt);
+}
+if (window.Chart) renderPhase();
+else { let tries = 0; const wait = setInterval(() => { if (window.Chart || tries++ > 30) { clearInterval(wait); renderPhase(); } }, 100); }
+
+// Mermaid 샘플
+const MMD = {
+  seq: `sequenceDiagram
+    participant U as 사용자
+    participant F as 프론트엔드
+    participant A as API
+    participant D as DB
+    U->>F: 회원가입 정보 입력
+    F->>A: POST /signup
+    A->>D: 사용자 저장
+    D-->>A: OK
+    A-->>F: 201 Created
+    F-->>U: 이메일 확인 안내`,
+  er: `erDiagram
+    USER ||--o{ ORDER : places
+    USER {
+        int id PK
+        string email
+        string name
+    }
+    ORDER ||--|{ ORDER_ITEM : contains
+    ORDER {
+        int id PK
+        int user_id FK
+        datetime created_at
+    }
+    ORDER_ITEM {
+        int id PK
+        int order_id FK
+        int product_id FK
+        int quantity
+    }
+    PRODUCT ||--o{ ORDER_ITEM : ordered_in
+    PRODUCT {
+        int id PK
+        string name
+        decimal price
+    }`,
+  gantt: `gantt
+    title viz-core 3개월 로드맵
+    dateFormat YYYY-MM-DD
+    section MVP
+    11종 viz_kind         :done, 2026-05-01, 14d
+    Hook 자동 트래킹       :done, 2026-05-15, 7d
+    section Beta
+    Mermaid 통합          :active, 2026-05-22, 5d
+    R&D 시각 강화         :2026-05-27, 14d
+    section Launch
+    ddalkkak 통합         :2026-06-10, 14d
+    배포 + 운영           :2026-06-24, 14d`,
+  mindmap: `mindmap
+  root((viz-core))
+    AI 출력
+      Claude Code Hook
+      자연어 요청
+      외부 에이전트
+    시각화
+      11종 viz_kind
+        diff/gauge/badge
+        kpi/journey/arch
+        animation/whatif
+      mermaid 무한
+    가치
+      글랜스 창
+      0.5초 이해
+      vocabulary 표준
+    R&D
+      더 큰 시각
+      애니메이션
+      인터랙티브`,
+  state: `stateDiagram-v2
+    [*] --> 장바구니
+    장바구니 --> 결제대기 : checkout
+    결제대기 --> 결제완료 : 결제 성공
+    결제대기 --> 장바구니 : 결제 실패
+    결제완료 --> 배송중 : 주문 확인
+    배송중 --> 배송완료 : 수령
+    배송완료 --> [*]
+    결제완료 --> 환불 : 취소 요청
+    환불 --> [*]`,
+};
+
+async function renderMermaid(id, code) {
+  if (!window.__mermaid) {
+    setTimeout(() => renderMermaid(id, code), 200);
+    return;
+  }
+  try {
+    const { svg } = await window.__mermaid.render(`${id}-svg`, code);
+    document.getElementById(id).innerHTML = svg;
+  } catch (e) {
+    document.getElementById(id).innerHTML = `<pre style="color:var(--danger); white-space:pre-wrap;">${esc(e.message)}\n\n${esc(code)}</pre>`;
+  }
+}
+setTimeout(() => {
+  renderMermaid("mmd-seq", MMD.seq);
+  renderMermaid("mmd-er", MMD.er);
+  renderMermaid("mmd-gantt", MMD.gantt);
+  renderMermaid("mmd-mindmap", MMD.mindmap);
+  renderMermaid("mmd-state", MMD.state);
+}, 500);
+</script>
+</body>
+</html>

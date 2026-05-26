@@ -1,10 +1,37 @@
 # 🎯 viz-core
 
-**AI 출력 시각화 R&D 레이어.** 단순화된 최소 viable 빌드.
+**나의 viz 지식 저장소.** 본인이 이해한 개념과 시스템을 시각으로 영구 저장 + AI 출력 시각화 레이어.
 
 `AI 출력 → viz-core → 사용자의 0.5초 글랜스`
+`나의 학습 → library → 다시 떠올릴 때 즉시`
 
 자세한 정의는 [../CORE.md](../CORE.md) 참고.
+
+---
+
+## 핵심 페이지
+
+| 경로 | 무엇 |
+|---|---|
+| `/` | 메인 — AI 출력 실시간 시각화 |
+| `/library.html` | 📚 **내 저장소** — 모든 24종 viz_kind 자산 통합 |
+| `/concepts.html` | 💡 병신교육소 — 기술 개념 비유 시각화 |
+| `/showcase` | 24종 viz_kind 샘플 갤러리 |
+| `/spec` | AI 가이드 — viz-spec 마커 명세 |
+
+## library/ 폴더 (영구 자산)
+
+```
+library/{viz_kind}/{slug}.json
+├── concept/        ← 기술 개념 (캐싱/Index/JWT...)
+├── depgraph/       ← 본인 시스템 의존도
+├── arch/           ← 본인 아키텍처
+└── ... (24종 가능)
+```
+
+- 추가: 폼 또는 JSON 직접 편집 (`/library.html`)
+- 백업: `/library/export` (zip 다운로드)
+- 복원: `/library/import` (zip 또는 JSON 업로드)
 
 ---
 

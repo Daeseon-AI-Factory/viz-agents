@@ -31,7 +31,7 @@
 ### DOES (이거만 한다)
 1. **시각화 specialist** — 어떻게 더 잘 보여줄지 R&D
 2. **모르면 LLM에 물어봄** — Claude API 호출은 "시각 만들기" 목적만
-3. **렌더 엔진** — viz_kind 11종 vocabulary + 동적 컴포넌트
+3. **렌더 엔진** — viz_kind 23종 vocabulary + Mermaid + Chart.js
 4. **글랜스 창** — 항상 켜진 별도 탭
 
 ### DOES NOT (이거 절대 X)
@@ -113,7 +113,9 @@ POST /event
 
 ---
 
-## 출력 vocabulary (11종 viz_kind)
+## 출력 vocabulary (23종 viz_kind)
+
+**핵심 (11종)** — 코드/시스템 작업
 
 | viz_kind | 언제 | 예시 |
 |---|---|---|
@@ -128,6 +130,34 @@ POST /event
 | `journey` | 사용자 여정 | 가입→결제→사용 단계 |
 | `arch` | 시스템 컴포넌트 | Frontend/API/DB 레이어 |
 | `whatif` | 변경 영향 예측 | 현재 vs 변경 후 비교 |
+
+**확장 — Mermaid + 차트 (4종)** — 무한 도식 + 일반 차트
+
+| viz_kind | 언제 | 예시 |
+|---|---|---|
+| `mermaid` | 시퀀스/ER/Gantt/마인드맵 등 | mermaid.js 문법 그대로 |
+| `callgraph` | 함수 호출 그래프 | 코드 의존 관계 |
+| `timeseries` | 시계열 추세 | 매출/사용자/응답시간 (Chart.js) |
+| `bar` | 카테고리 비교 | 지역/팀/제품별 비교 (Chart.js) |
+| `funnel` | 전환 깔때기 | 방문→가입→결제 conversion |
+
+**Phase 2+3 — 비즈니스/운영 (4종)**
+
+| viz_kind | 언제 | 예시 |
+|---|---|---|
+| `heatmap` ★ | 시간×지표 분포 | 요일×시간대 CPU 사용률 |
+| `kanban` ★ | 작업 보드 | TODO/DOING/DONE + 담당자 |
+| `waterfall` ★ | 분산 추적 | API 요청 trace span 시간축 |
+| `cohort` ★ | retention 매트릭스 | 월별 가입자 유지율 |
+
+**Phase 4 — PM/UX/시스템 설계 (4종)**
+
+| viz_kind | 언제 | 예시 |
+|---|---|---|
+| `crud` ★ | 권한 매트릭스 | 엔티티×역할 CRUD/RACI |
+| `userflow` ★ | 사용자 동선+분기 | journey 보다 정밀, decision 노드 |
+| `screenmap` ★ | 화면+전환 | UX 와이어프레임 |
+| `depgraph` ★ | 서비스 의존성 | 마이크로서비스 그래프 |
 
 이게 viz-core 의 **vocabulary**. 외부 에이전트도 이 형식으로 보냄.
 
@@ -215,7 +245,7 @@ viz-core 는 **AI 와 사용자 사이의 시각 다리.**
 - ❌ 종합 대시보드 → 시각화 R&D 만
 - ❌ Production-grade scaling → 본인 머신 localhost
 - ❌ 다중 사용자 권한 → 단일 사용자
-- ❌ 모든 viz_kind 무한 확장 → 11종 핵심에 집중
+- ❌ 모든 viz_kind 무한 확장 → 19종 + mermaid 폴백
 - ❌ AI 자체 성능 향상 → AI 출력 가공
 
 ---
@@ -238,7 +268,7 @@ Claude Code 1.0 → 100.0 가 되어도 viz-core 의 미션은 같음.
 
 - 본인이 직접 매일 30분 사용해야 진짜 가치 검증
 - 매번 단순화 / 정리 필요 (기능 자꾸 늘면 본질 흐려짐)
-- 11종 viz_kind 가 충분한지 사용 데이터 필요
+- 23종 viz_kind + mermaid 폴백이 충분한지 사용 데이터 필요
 - LLM 비용 ($0.1-1/일) 발생
 - 다른 AI 에이전트 (SI/QA/OPS) 빌드되어야 진짜 옵션 B 가능
 

@@ -1,0 +1,27 @@
+{
+  "slug": "db-index",
+  "category": "성능",
+  "tags": ["DB", "검색", "성능"],
+  "concept": "DB Index",
+  "tagline": "백과사전 색인처럼 — 처음부터 뒤지지 말고 색인으로 점프.",
+  "analogy": { "name": "백과사전 뒷쪽 색인", "icon": "📚" },
+  "comparison": {
+    "without": {
+      "icon": "📖",
+      "label": "전체 페이지 다 읽기 (Full Scan)",
+      "steps": ["1페이지부터 차례로", "원하는 단어 찾을 때까지", "10만 페이지 다 읽음"],
+      "metric": "10초"
+    },
+    "with": {
+      "icon": "🔍",
+      "label": "색인 → 페이지 점프",
+      "steps": ["색인에서 단어 찾기", "페이지 번호 보고 점프", "해당 페이지만 읽기"],
+      "metric": "0.01초"
+    }
+  },
+  "tradeoffs": {
+    "pros": ["1000배 빠른 검색", "대량 데이터에서 필수"],
+    "cons": ["저장 공간 ↑ (색인용 별도 공간)", "쓰기/수정 시 색인도 업데이트 → 느려짐", "너무 많이 만들면 오히려 손해"]
+  },
+  "real_world": "users 테이블의 email/phone 검색, 게시판 created_at 정렬, 검색 기능"
+}

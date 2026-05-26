@@ -1,0 +1,10 @@
+{
+  "slug": "cdn",
+  "viz_kind": "concept",
+  "concept": "CDN",
+  "tagline": "동네 편의점이 본사 창고 대신 가까이",
+  "analogy": {
+    "name": "편의점",
+    "icon": "🏪"
+  }
+}

@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>viz-core — Spec</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e; --dim: #6e7681;
+    --accent: #58a6ff; --user: #d29922; --edit: #f78166;
+    --bash: #3fb950; --search: #a371f7; --agent: #db61a2;
+    --danger: #f85149;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, sans-serif;
+    padding: 30px;
+    max-width: 1100px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+  h1 { font-size: 28px; margin-bottom: 4px; }
+  h2 { font-size: 20px; margin: 40px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 15px; margin: 22px 0 10px; color: var(--accent); font-family: ui-monospace, monospace; }
+  .subtitle { color: var(--muted); margin-bottom: 24px; font-size: 14px; }
+
+  .nav { display: flex; gap: 10px; margin-bottom: 28px; flex-wrap: wrap; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .nav a {
+    padding: 7px 14px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); text-decoration: none; font-size: 12px;
+    font-family: ui-monospace, monospace;
+  }
+  .nav a:hover { border-color: var(--accent); color: var(--accent); }
+  .back { background: var(--accent); color: #fff !important; }
+
+  /* Hero box */
+  .hero {
+    background: linear-gradient(135deg, rgba(88,166,255,0.08), rgba(63,185,80,0.04));
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 22px 26px;
+    margin-bottom: 30px;
+  }
+  .hero h1 { color: var(--accent); }
+  .hero p { font-size: 14px; color: var(--text); margin-top: 8px; }
+
+  /* prompt copy box */
+  .copybox {
+    position: relative;
+    background: var(--bg);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin: 16px 0 24px;
+    font-family: ui-monospace, monospace;
+    font-size: 12.5px;
+    color: var(--text);
+    white-space: pre-wrap;
+    line-height: 1.65;
+    overflow: auto;
+    max-height: 520px;
+  }
+  .copy-btn {
+    position: absolute; top: 8px; right: 10px;
+    background: var(--accent); color: #fff; border: 0;
+    padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer;
+    font-weight: 700;
+  }
+  .copy-btn:hover { background: #3fb950; }
+  .copy-btn.copied { background: var(--bash); }
+
+  /* kind cards */
+  .kinds {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px;
+  }
+  .kind {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .kind-name {
+    font-family: ui-monospace, monospace; font-size: 14px; font-weight: 800;
+    color: var(--accent);
+  }
+  .kind-when { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .kind-schema {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 10px; margin-top: 10px;
+    font-family: ui-monospace, monospace; font-size: 11px; color: var(--text);
+    white-space: pre-wrap; line-height: 1.5;
+  }
+  .phase-tag {
+    display: inline-block; font-size: 9px; padding: 2px 7px; border-radius: 4px;
+    margin-left: 7px; font-weight: 700; letter-spacing: 0.5px;
+    vertical-align: middle;
+  }
+  .ph-core { background: rgba(88,166,255,0.2); color: var(--accent); }
+  .ph-1 { background: rgba(63,185,80,0.2); color: var(--bash); }
+  .ph-2 { background: rgba(210,153,34,0.2); color: var(--user); }
+  .ph-3 { background: rgba(219,97,162,0.2); color: var(--agent); }
+  .ph-4 { background: rgba(163,113,247,0.2); color: var(--search); }
+
+  /* tables */
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+  th, td { padding: 9px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-weight: 700; background: var(--panel); }
+  td code { background: var(--bg); padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 12px; color: var(--accent); }
+
+  p { font-size: 14px; color: var(--text); margin: 10px 0; }
+  ul { padding-left: 22px; margin: 8px 0; }
+  li { font-size: 13.5px; color: var(--text); margin: 5px 0; }
+  code.inline { background: var(--panel); padding: 2px 7px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 12.5px; color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <a href="/" class="back">← viz-core 메인</a>
+  <a href="/showcase">📐 showcase</a>
+  <a href="#what">viz-core 가 뭔지</a>
+  <a href="#prompt">🔥 복붙 프롬프트</a>
+  <a href="#install">박는 방법</a>
+  <a href="#kinds">23종 카탈로그</a>
+  <a href="#api">API</a>
+</div>
+
+<div class="hero">
+  <h1>viz-core spec</h1>
+  <p>AI 출력을 보지 않고 옆 창만 봐도 이해되도록 — <strong>다른 AI 가 viz-core 가 알아듣는 형식으로 출력</strong>하게 하는 명세.</p>
+  <p style="margin-top:12px; font-size:13px; color:var(--muted);">메인 응답은 그대로. <code class="inline">viz-spec</code> 코드펜스가 사이드카로 자동 추출됨. LLM 호출 0.</p>
+</div>
+
+<h2 id="what">한 그림으로</h2>
+
+<div style="background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:24px; font-family:ui-monospace,monospace; font-size:12.5px; line-height:1.7; white-space:pre;">
+┌─── 다른 AI (Claude / ChatGPT / Cursor / ...) ───┐
+│                                                  │
+│  답변: "회원가입 흐름은 이렇게..."                │  ← 사용자에게 보임
+│                                                  │
+│  ```viz-spec                                     │  ← 사이드카 (안 보임)
+│  {"viz_kind":"userflow", "data":{...}}          │
+│  ```                                             │
+└─────────────────┬────────────────────────────────┘
+                  │ 마커만 추출 (LLM 호출 X)
+                  ▼
+            viz-core (localhost:8765)
+                  │
+                  ▼
+            브라우저 옆 탭 시각화
+</div>
+
+<h2 id="prompt">🔥 복붙 프롬프트</h2>
+
+<p>본인 AI 의 system prompt / Custom Instructions 에 박으세요. 한 번만 박으면 끝.</p>
+
+<h3>한국어 (짧은 버전)</h3>
+<div class="copybox" id="prompt-ko"><button class="copy-btn" data-target="prompt-ko">📋 복사</button>viz-core 와 페어로 일합니다. 답변이 그림으로 더 명료해질 때, 답변 끝에 viz-spec 코드펜스를 추가하세요. 메인 답변은 그대로 두고, viz-core 가 마커만 뽑아 옆 창에 그립니다.
+
+형식:
+```viz-spec
+{"viz_kind": "...", "data": {...}}
+```
+
+선택 가능한 viz_kind (23종):
+userflow, screenmap, depgraph, crud, callgraph, arch, timeseries, bar,
+funnel, heatmap, kanban, waterfall, cohort, kpi, gauge, diff, table,
+flow, badge, code, animation, journey, whatif, mermaid
+
+규칙:
+- viz-spec 블록은 사이드카. 메인 답변에서 절대 언급 X.
+- 한 답변에 1개면 충분. 별도 시각이면 여러 개 OK.
+- 애매하면 빼는 게 나음. 잘못된 viz 보다 viz 없는 게 나음.
+- 실제 데이터 / 짧게.
+- 각 viz_kind 의 schema 는 http://localhost:8765/spec 참고.</div>
+
+<h3>English (full)</h3>
+<div class="copybox" id="prompt-en"><button class="copy-btn" data-target="prompt-en">📋 copy</button>You are paired with viz-core, an AI-output visualization layer. When your
+answer would benefit from a diagram, append a viz-spec code fence at the end.
+The main answer is unchanged; viz-core picks the fence up and renders it
+in a side window.
+
+Format:
+```viz-spec
+{"viz_kind": "<one of 23 kinds>", "data": {...}}
+```
+
+Choose viz_kind based on intent:
+- userflow: user journey with branches (decision nodes)
+- screenmap: screens + transitions (UX wireframes)
+- depgraph: service dependencies (microservices)
+- crud: entity × role permissions matrix
+- callgraph: function call graph in code
+- arch: system architecture layers
+- timeseries: trends over time
+- bar: category comparison
+- funnel: conversion stages
+- heatmap: 2D distribution (time × metric)
+- kanban: TODO/DOING/DONE board
+- waterfall: distributed trace spans
+- cohort: retention matrix
+- kpi: business metrics cards
+- gauge: single number with max
+- diff: before/after code
+- table: rows × columns
+- flow: linear steps with status
+- badge: single status label
+- code: code snippet
+- animation: data flowing between nodes
+- journey: simple user journey (no branches)
+- whatif: current vs. after comparison
+- mermaid: anything not above (Mermaid syntax in `code`)
+
+Rules:
+- The viz-spec block is sidecar. Never reference it in the main answer.
+- One block per answer is enough. Multiple OK if truly separate views.
+- If unsure, omit. Better no viz than wrong viz.
+- Real numbers, not placeholders.
+- Schema per kind: http://localhost:8765/spec</div>
+
+<h2 id="install">박는 방법</h2>
+
+<table>
+<thead><tr><th>AI 도구</th><th>박는 위치</th></tr></thead>
+<tbody>
+<tr><td><strong>Claude Code</strong></td><td><code>~/.claude/CLAUDE.md</code> 또는 프로젝트 <code>CLAUDE.md</code></td></tr>
+<tr><td><strong>ChatGPT</strong></td><td>Settings → Personalization → Custom Instructions</td></tr>
+<tr><td><strong>Cursor</strong></td><td><code>.cursor/rules</code> 또는 <code>.cursorrules</code></td></tr>
+<tr><td><strong>Claude 웹</strong></td><td>프로젝트 설정 → System Prompt</td></tr>
+<tr><td><strong>Continue.dev</strong></td><td><code>~/.continue/config.json</code> <code>systemMessage</code></td></tr>
+<tr><td><strong>자체 agent</strong></td><td>자체 system prompt 에 박기</td></tr>
+</tbody>
+</table>
+
+<h3>Claude Code 자동 hook (선택)</h3>
+
+<p><code>~/.claude/settings.json</code> 에 박으면 Stop 시 자동으로 viz-core 로 보냄:</p>
+
+<div class="copybox" id="hook-snippet"><button class="copy-btn" data-target="hook-snippet">📋 복사</button>{
+  "hooks": {
+    "Stop": [{
+      "matcher": "",
+      "hooks": [{
+        "type": "command",
+        "command": "jq -Rs '{text:.}' | curl -s -X POST http://localhost:8765/viz/spec -H 'Content-Type: application/json' -d @-"
+      }]
+    }]
+  }
+}</div>
+
+<h2 id="kinds">23종 카탈로그</h2>
+
+<p>각 viz_kind 의 최소 schema. 실제 예시는 <a href="/showcase" style="color:var(--accent);">/showcase</a> 에서.</p>
+
+<div class="kinds" id="kinds-list">
+  <!-- 채워짐 by JS -->
+</div>
+
+<h2 id="api">API</h2>
+
+<h3>POST /viz/spec — 텍스트 받아 viz-spec 추출 + 브로드캐스트</h3>
+
+<div class="copybox" id="api-spec"><button class="copy-btn" data-target="api-spec">📋 복사</button>curl -X POST http://localhost:8765/viz/spec \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "text": "...AI 응답 전문...",
+    "source": "claude-code",
+    "session_id": "optional"
+  }'
+
+응답: {"ok": true, "count": N, "specs": [{"viz_kind":"..."}], "llm_used": false}</div>
+
+<h3>POST /viz/request — 자연어 → LLM 위임 → viz (예전 방식)</h3>
+
+<p>viz-spec 마커 없을 때 폴백. LLM 호출됨. 비용/지연 있음.</p>
+
+<div class="copybox" id="api-req"><button class="copy-btn" data-target="api-req">📋 복사</button>curl -X POST http://localhost:8765/viz/request \
+  -H 'Content-Type: application/json' \
+  -d '{"request": "월별 매출 추세 그려줘"}'</div>
+
+<h2>왜 viz-spec 이 더 좋은가</h2>
+
+<table>
+<thead><tr><th></th><th>POST /viz/request (LLM 호출)</th><th>POST /viz/spec (마커 추출)</th></tr></thead>
+<tbody>
+<tr><td>LLM 호출</td><td>O</td><td><strong>X</strong></td></tr>
+<tr><td>지연</td><td>1.5~3s</td><td><strong>&lt; 50ms</strong></td></tr>
+<tr><td>비용/요청</td><td>~$0.001</td><td><strong>$0</strong></td></tr>
+<tr><td>정확도</td><td>AI 가 재해석 (실수 가능)</td><td><strong>AI 가 직접 지정 (실수 X)</strong></td></tr>
+<tr><td>데이터 풍부도</td><td>LLM 이 추측한 값</td><td><strong>AI 가 실제 컨텍스트로 채움</strong></td></tr>
+</tbody>
+</table>
+
+<p style="margin-top:24px; padding:14px 18px; background:var(--panel); border-left:3px solid var(--accent); border-radius:6px; font-size:13.5px;">
+  <strong>요약:</strong> AI 가 viz-core 와 협력하면 — 빠르고, 무료고, 정확. 작업물 (메인 응답) 은 그대로.
+</p>
+
+<script>
+// ── 카탈로그 데이터 (server.py SUMMARY_SYSTEM/VIZ_AGENT_SYSTEM 과 동기화) ──
+const KINDS = [
+  // 핵심 11종
+  { kind: "diff", phase: "core", when: "코드 / 텍스트 변경", schema: '{"file","before","after","lang"}' },
+  { kind: "gauge", phase: "core", when: "단일 수치 / 진행률", schema: '{"label","value","max","unit"}' },
+  { kind: "table", phase: "core", when: "여러 항목 비교", schema: '{"headers":[...],"rows":[[...]]}' },
+  { kind: "flow", phase: "core", when: "순서 있는 단계", schema: '{"steps":[{"name","status":"done|now|todo"}]}' },
+  { kind: "badge", phase: "core", when: "단일 상태 라벨", schema: '{"label","tone":"success|error|warning|info"}' },
+  { kind: "code", phase: "core", when: "짧은 코드 스니펫", schema: '{"lang","code"}' },
+  { kind: "animation", phase: "core", when: "데이터 흐름 (점 이동)", schema: '{"nodes":[{"id","label"}],"flow":["id1","id2",...],"duration_ms"}' },
+  { kind: "kpi", phase: "core", when: "비즈니스 메트릭", schema: '{"kpis":[{"label","value","trend":"up|down|flat","delta"}]}' },
+  { kind: "journey", phase: "core", when: "단순 사용자 여정", schema: '{"persona","stages":[{"name","icon","drop"}]}' },
+  { kind: "arch", phase: "core", when: "시스템 컴포넌트 레이어", schema: '{"layers":[{"name","components":[...]}],"active_layer"}' },
+  { kind: "whatif", phase: "core", when: "현재 vs 변경 후", schema: '{"title","current":[{"k","v"}],"after":[{"k","v","change":"good|bad|neutral"}],"recommendation"}' },
+  // 확장
+  { kind: "mermaid", phase: "core", when: "무한 도식 (Mermaid 문법)", schema: '{"code":"<mermaid syntax>","title"}' },
+  { kind: "callgraph", phase: "core", when: "코드 함수 호출 그래프", schema: '{"nodes":[{"id","label","in_degree","out_degree"}],"edges":[{"from","to"}],"entries":[{"entry","chain"}]}' },
+  // Phase 1
+  { kind: "timeseries", phase: "1", when: "시계열 추세 (Chart.js)", schema: '{"title","labels":[...],"series":[{"label","values":[...],"color"}]}' },
+  { kind: "bar", phase: "1", when: "카테고리 비교 (Chart.js)", schema: '{"title","labels":[...],"values":[...],"horizontal":false}' },
+  { kind: "funnel", phase: "1", when: "전환 깔때기", schema: '{"title","stages":[{"name","value"}]}' },
+  // Phase 2
+  { kind: "heatmap", phase: "2", when: "시간 × 지표 분포", schema: '{"title","labels_x":[...],"labels_y":[...],"matrix":[[...]]}' },
+  { kind: "kanban", phase: "2", when: "TODO / DOING / DONE", schema: '{"title","columns":[{"name","cards":[{"title","assignee","tags":[...]}]}]}' },
+  // Phase 3
+  { kind: "waterfall", phase: "3", when: "분산 추적 (trace span)", schema: '{"title","spans":[{"name","service","start_ms","duration_ms","color"}]}' },
+  { kind: "cohort", phase: "3", when: "retention 매트릭스", schema: '{"title","cohorts":[{"label","initial","retention":[...]}]}' },
+  // Phase 4
+  { kind: "crud", phase: "4", when: "엔티티 × 역할 권한", schema: '{"title","entities":[...],"actors":[...],"matrix":[[["C","R","U","D"],...],...]}' },
+  { kind: "userflow", phase: "4", when: "사용자 동선 + 분기", schema: '{"title","nodes":[{"id","label","kind":"start|screen|decision|action|end"}],"edges":[{"from","to","label"}]}' },
+  { kind: "screenmap", phase: "4", when: "화면 박스 + 전환", schema: '{"title","screens":[{"id","title","x","y","items":[...]}],"transitions":[{"from","to","action"}]}' },
+  { kind: "depgraph", phase: "4", when: "서비스 의존성 그래프", schema: '{"title","services":[{"id","label","kind":"frontend|api|service|db|cache|cdn|queue|external"}],"deps":[{"from","to","kind":"http|db|cache|queue"}]}' },
+  // Phase 5 - 개념 이해
+  { kind: "concept", phase: "5", when: "★★ 기술 개념 = 비유 + 시각 + 장단 (병신도 이해)", schema: '{"concept","tagline","analogy":{"name","icon"},"comparison":{"without":{"icon","label","steps","metric"},"with":{...}},"tradeoffs":{"pros":[...],"cons":[...]},"real_world"}' },
+];
+
+const phaseLabel = { core: "기본", "1": "Phase 1", "2": "Phase 2", "3": "Phase 3", "4": "Phase 4", "5": "Phase 5" };
+const phaseClass = { core: "ph-core", "1": "ph-1", "2": "ph-2", "3": "ph-3", "4": "ph-4", "5": "ph-1" };
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
+
+const html = KINDS.map(k => `
+  <div class="kind">
+    <div>
+      <span class="kind-name">${esc(k.kind)}</span>
+      <span class="phase-tag ${phaseClass[k.phase]}">${phaseLabel[k.phase]}</span>
+    </div>
+    <div class="kind-when">${esc(k.when)}</div>
+    <div class="kind-schema">${esc(k.schema)}</div>
+  </div>
+`).join("");
+document.getElementById("kinds-list").innerHTML = html;
+
+// 복사 버튼
+document.querySelectorAll(".copy-btn").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const target = document.getElementById(btn.dataset.target);
+    const text = target.innerText.replace(/^📋 (복사|copy)\s*/m, "").trim();
+    try {
+      await navigator.clipboard.writeText(text);
+      const orig = btn.textContent;
+      btn.classList.add("copied");
+      btn.textContent = "✓ 복사됨";
+      setTimeout(() => { btn.classList.remove("copied"); btn.textContent = orig; }, 1500);
+    } catch (e) {
+      btn.textContent = "복사 실패";
+    }
+  });
+});
+</script>
+</body>
+</html>
