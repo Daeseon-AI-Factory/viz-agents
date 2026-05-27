@@ -506,6 +506,156 @@ async def stats_page() -> FileResponse:
     return FileResponse(HERE / "stats.html")
 
 
+# ── ★ 세션 추적 (AI 시대의 git log) ──
+# Claude Code hooks → /sessions/event POST → 일일 자산화
+
+SESSIONS_DIR = HERE / "sessions"
+SESSIONS_DIR.mkdir(exist_ok=True)
+
+
+def _today_iso() -> str:
+    return datetime.now().strftime("%Y-%m-%d")
+
+
+def _session_file(date: str | None = None) -> Path:
+    d = date or _today_iso()
+    return SESSIONS_DIR / f"{d}.jsonl"
+
+
+@app.post("/sessions/event")
+async def sessions_event(request: Request) -> dict[str, Any]:
+    """Claude Code hook 또는 외부에서 세션 이벤트 박기.
+
+    Body: {
+      "kind": "prompt|tool|response|file_edit|bash|stop|session_start",
+      "text": "...",         # optional summary
+      "tool": "Edit",        # optional
+      "target": "server.py", # optional (file path / command)
+      "session_id": "...",   # optional Claude Code session id
+      "source": "claude-code|user|chatgpt|...",
+    }
+    """
+    raw = await request.body()
+    try:
+        data = json.loads(raw) if raw else {}
+    except Exception:
+        return {"ok": False, "error": "JSON 파싱"}
+    if not isinstance(data, dict) or not data.get("kind"):
+        return {"ok": False, "error": "kind 필요"}
+
+    entry = {
+        "ts": _now_iso(),
+        "time": _now_iso().split("T")[1][:8],
+        "kind": (data.get("kind") or "").lower(),
+        "text": (data.get("text") or "")[:500],
+        "tool": data.get("tool") or "",
+        "target": data.get("target") or "",
+        "session_id": data.get("session_id") or "",
+        "source": data.get("source") or "external",
+    }
+    # 영구 — sessions/{YYYY-MM-DD}.jsonl
+    sf = _session_file()
+    with sf.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+    # 옆 탭에 라이브 timeline push (옵션 — kind 가 noisy 면 생략)
+    if entry["kind"] in {"prompt", "response", "stop", "session_start", "file_edit"}:
+        record = {
+            "ts": entry["ts"],
+            "data": {
+                "hook_event_name": "session_event",
+                "session_id": entry["session_id"] or "_session_today",
+                "reason": "session_live",
+                "event_count": 0,
+                "llm_used": False,
+                "summary": entry["text"] or entry["kind"],
+                "next_step": "",
+                "viz_kind": "session",
+                "viz_reason": "live session tracking",
+                "viz_data": await _build_session_data(),  # 오늘 전체 timeline
+            }
+        }
+        async with _lock:
+            _history.append(record)
+        await _broadcast(record)
+
+    return {"ok": True, "saved_to": f"sessions/{sf.name}"}
+
+
+async def _build_session_data(date: str | None = None) -> dict[str, Any]:
+    """sessions/{date}.jsonl 읽어서 session viz_data 만들기."""
+    sf = _session_file(date)
+    events = []
+    if sf.exists():
+        try:
+            for line in sf.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    events.append(json.loads(line))
+                except Exception:
+                    continue
+        except Exception:
+            pass
+    d = date or _today_iso()
+    return {
+        "title": f"{d} session",
+        "date": d,
+        "event_count": len(events),
+        "events": events[-100:],  # 최근 100개만 (UI 부담)
+    }
+
+
+@app.get("/sessions/today")
+async def sessions_today() -> dict[str, Any]:
+    """오늘 세션 데이터 (viz 용)."""
+    return {"ok": True, "viz_kind": "session", "data": await _build_session_data()}
+
+
+@app.get("/sessions/{date}")
+async def sessions_get(date: str) -> dict[str, Any]:
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
+        return {"ok": False, "error": "date 형식: YYYY-MM-DD"}
+    return {"ok": True, "viz_kind": "session", "data": await _build_session_data(date)}
+
+
+@app.get("/sessions")
+async def sessions_list() -> dict[str, Any]:
+    """모든 세션 날짜 목록."""
+    if not SESSIONS_DIR.exists():
+        return {"ok": True, "dates": []}
+    dates = sorted(
+        [p.stem for p in SESSIONS_DIR.glob("*.jsonl") if re.match(r"^\d{4}-\d{2}-\d{2}$", p.stem)],
+        reverse=True
+    )
+    return {"ok": True, "dates": dates}
+
+
+@app.post("/sessions/{date}/archive")
+async def sessions_archive(date: str) -> dict[str, Any]:
+    """세션을 library/session/{date}.json 자산으로 영구화."""
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
+        return {"ok": False, "error": "date 형식: YYYY-MM-DD"}
+    data = await _build_session_data(date)
+    slug = date  # YYYY-MM-DD 형식. SLUG_PATTERN 매치
+    p = _library_path("session", slug)
+    if not p:
+        return {"ok": False, "error": "경로 생성 실패"}
+    asset = {
+        "slug": slug,
+        "viz_kind": "session",
+        "title": f"Session {date}",
+        "tagline": f"{data.get('event_count', 0)} events",
+        "category": "session",
+        "tags": ["session", "daily", date[:7]],
+        **data,
+    }
+    p.write_text(json.dumps(asset, ensure_ascii=False, indent=2), encoding="utf-8")
+    _log_usage(kind="session_archive", viz_kind="session", slug=slug)
+    return {"ok": True, "slug": slug, "saved_to": f"library/session/{slug}.json", "event_count": data.get("event_count", 0)}
+
+
 @app.get("/stats/data")
 async def stats_data() -> dict[str, Any]:
     """사용 통계 집계 — 캘린더, top 자산, 메트릭."""
@@ -955,6 +1105,7 @@ VALID_VIZ_KINDS = {
     "timeseries", "bar", "funnel", "heatmap", "kanban", "waterfall", "cohort",
     "crud", "userflow", "screenmap", "depgraph",
     "concept",
+    "session",
 }
 
 
@@ -1581,6 +1732,55 @@ async def event(request: Request) -> dict[str, bool]:
     await _broadcast(record)
     sid = data.get("session_id", "") if isinstance(data, dict) else ""
     name = data.get("hook_event_name", "") if isinstance(data, dict) else ""
+    # ★ Claude Code hook → sessions log 자동 기록
+    if isinstance(data, dict) and name:
+        kind_map = {
+            "UserPromptSubmit": "prompt",
+            "PreToolUse": "tool",
+            "PostToolUse": "tool",
+            "Stop": "stop",
+            "SubagentStop": "stop",
+            "SessionStart": "session_start",
+            "Notification": "notification",
+        }
+        kind = kind_map.get(name, name.lower())
+        tool = ""
+        target = ""
+        text = ""
+        if name in ("PreToolUse", "PostToolUse"):
+            tool = data.get("tool_name", "") or ""
+            ti = data.get("tool_input", {}) or {}
+            if isinstance(ti, dict):
+                target = ti.get("file_path", "") or ti.get("command", "") or ti.get("pattern", "")
+                if not target and ti.get("description"):
+                    text = ti["description"][:200]
+            if name == "PreToolUse":
+                kind = "tool"  # PreToolUse 만 기록 (PostToolUse 중복)
+            else:
+                kind = "tool_result"
+        elif name == "UserPromptSubmit":
+            text = (data.get("prompt") or "")[:300]
+        elif name in ("Stop", "SubagentStop"):
+            text = "session ended"
+        elif name == "SessionStart":
+            text = "session started"
+        # 영구 — sessions/{date}.jsonl (PostToolUse 중복은 skip)
+        if name != "PostToolUse":
+            entry = {
+                "ts": _now_iso(),
+                "time": _now_iso().split("T")[1][:8],
+                "kind": kind,
+                "text": text,
+                "tool": tool,
+                "target": target,
+                "session_id": sid,
+                "source": "claude-code",
+            }
+            try:
+                with _session_file().open("a", encoding="utf-8") as f:
+                    f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            except Exception:
+                pass
     if sid and name and name != "PreToolUse":
         _session_events.setdefault(sid, []).append(record)
         if name == "Stop":

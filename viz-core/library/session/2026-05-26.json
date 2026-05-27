@@ -1,0 +1,116 @@
+{
+  "slug": "2026-05-26",
+  "viz_kind": "session",
+  "title": "2026-05-26 session",
+  "tagline": "10 events",
+  "category": "session",
+  "tags": [
+    "session",
+    "daily",
+    "2026-05"
+  ],
+  "date": "2026-05-26",
+  "event_count": 10,
+  "events": [
+    {
+      "ts": "2026-05-26T19:52:34",
+      "time": "19:52:34",
+      "kind": "stop",
+      "text": "session ended",
+      "tool": "",
+      "target": "",
+      "session_id": "8b955ab7-a5ef-4ecb-afa8-626dd98b76cd",
+      "source": "claude-code"
+    },
+    {
+      "ts": "2026-05-26T19:52:37",
+      "time": "19:52:37",
+      "kind": "tool",
+      "text": "",
+      "tool": "Bash",
+      "target": "tail -30 /tmp/viz-core.log",
+      "session_id": "fc259974-2a9c-4da0-a1d0-b69cd80115bb",
+      "source": "claude-code"
+    },
+    {
+      "ts": "2026-05-26T19:52:38",
+      "time": "19:52:38",
+      "kind": "tool",
+      "text": "",
+      "tool": "Bash",
+      "target": "git add docs/engineering-log.md && git commit -m \"docs(log): Phase 4 design decisions (DR-11 revised + DR-12..15)\n\nPer Jason's choice to do Phase 4 properly (not skip), captured 5\ndesign DRs before any code is written:\n\nDR-11 revised — original 'skip Phase 4' recommendation reversed.\n  Original optimized for calendar time (~3 weeks). Jason's explicit\n  optimization target is engineering growth + production safety, which\n  reverses the calculation. Both the original and revised analyses\n  are kept in the DR for the meta-lesson: the right answer changes\n  with the objective function.\n\nDR-12 — Storage representation: single JSON blob per game keyed by\n  ki_clash:game:{game_id}, serialized via Pydantic model_dump_json.\n  Considered hash fields, multi-key, RedisJSON; chose blob for atomic\n  full-state updates and trivial schema evolution.\n\nDR-13 — Pub/sub topology: per-player channel\n  (ki_clash:player:{player_id}). Considered per-game, global,\n  WebSocket-direct; chose per-player for direct routing with no\n  filtering overhead.\n\nDR-14 — Concurrency control: Redis WATCH/MULTI/EXEC optimistic with\n  3-retry budget. Considered locks, Lua, queues; chose optimistic\n  because contention is < 0.1% at our scale.\n\nDR-15 — Session statefulness: workers are stateless, Redis is truth.\n  PvPGameSession becomes a façade of methods that load/mutate/save.\n  Eliminates cache coherence problems, makes worker crashes\n  recoverable, simplifies horizontal scaling.\n\nEach DR follows the 6-part structure (Decision/Options/Trade-offs/\nReasoning/Meta-pattern/Interview-framing) so Jason can use them as\nstudy material.\n\nAlso: Part 1 chronological log gains a Phase 4 'starts: design-first'\nentry that links to the new DRs and lists the 6 implementation\nsub-phases (4.1 through 4.6).\n\nCo-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>\" 2>&1 | tail -3",
+      "session_id": "642d73df-3568-44b4-ad08-569fada930a2",
+      "source": "claude-code"
+    },
+    {
+      "ts": "2026-05-26T19:52:45",
+      "time": "19:52:45",
+      "kind": "tool",
+      "text": "",
+      "tool": "Bash",
+      "target": "ps aux | grep \"python server.py\" | grep -v grep\necho \"---\"\nlsof -i :8765 2>&1 | head -5\necho \"---\"\ncat /tmp/viz-core.log | tail -50",
+      "session_id": "fc259974-2a9c-4da0-a1d0-b69cd80115bb",
+      "source": "claude-code"
+    },
+    {
+      "ts": "2026-05-26T19:52:54",
+      "time": "19:52:54",
+      "kind": "notification",
+      "text": "",
+      "tool": "",
+      "target": "",
+      "session_id": "4ccbb42e-5955-4423-8452-fa163278e518",
+      "source": "claude-code"
+    },
+    {
+      "ts": "2026-05-26T19:52:56",
+      "time": "19:52:56",
+      "kind": "prompt",
+      "text": "채팅로그에 들어가면 이게 너네 본진으로 어떻게든 가냐?",
+      "tool": "",
+      "target": "",
+      "session_id": "8b955ab7-a5ef-4ecb-afa8-626dd98b76cd",
+      "source": "claude-code"
+    },
+    {
+      "ts": "2026-05-26T19:52:56",
+      "time": "19:52:56",
+      "kind": "tool",
+      "text": "",
+      "tool": "Bash",
+      "target": "curl -sv http://127.0.0.1:8765/healthz 2>&1 | head -25",
+      "session_id": "fc259974-2a9c-4da0-a1d0-b69cd80115bb",
+      "source": "claude-code"
+    },
+    {
+      "ts": "2026-05-26T19:53:08",
+      "time": "19:53:08",
+      "kind": "tool",
+      "text": "",
+      "tool": "Bash",
+      "target": "echo \"=== /sessions/event POST ===\"\ncurl -s -X POST http://127.0.0.1:8765/sessions/event \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"kind\":\"prompt\",\"text\":\"viz-core 시작\",\"source\":\"user\"}'\necho \"\"\n\necho \"\"\necho \"=== /sessions/today ===\"\ncurl -s http://127.0.0.1:8765/sessions/today | python3 -m json.tool\n\necho \"\"\necho \"=== /sessions 목록 ===\"\ncurl -s http://127.0.0.1:8765/sessions",
+      "session_id": "fc259974-2a9c-4da0-a1d0-b69cd80115bb",
+      "source": "claude-code"
+    },
+    {
+      "ts": "2026-05-26T19:53:10",
+      "time": "19:53:10",
+      "kind": "prompt",
+      "text": "viz-core 시작",
+      "tool": "",
+      "target": "",
+      "session_id": "",
+      "source": "user"
+    },
+    {
+      "ts": "2026-05-26T19:53:31",
+      "time": "19:53:31",
+      "kind": "tool",
+      "text": "",
+      "tool": "Bash",
+      "target": "echo \"=== /sessions/2026-05-26/archive ===\"\ncurl -s -X POST http://127.0.0.1:8765/sessions/2026-05-26/archive | python3 -m json.tool\n\necho \"\"\necho \"=== library 에 session 자산 박힘 확인 ===\"\ncurl -s \"http://127.0.0.1:8765/library?lang=en\" | python3 -c \"\nimport json, sys\nd = json.load(sys.stdin)\nprint('total:', d['count'])\nfor i in d['items']:\n    print(f\\\"  {i['viz_kind']}/{i['slug']:<25} -> {i['title']}\\\")\n\"\n\necho \"\"\necho \"=== ls library/session/ ===\"\nls -la library/session/ 2>&1 | head -5\n\necho \"\"\necho \"=== Dockerfile + fly.toml 박힘 확인 ===\"\nls -la Dockerfile fly.toml DEPLOY.md 2>&1 | head -5",
+      "session_id": "fc259974-2a9c-4da0-a1d0-b69cd80115bb",
+      "source": "claude-code"
+    }
+  ]
+}

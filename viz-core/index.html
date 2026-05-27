@@ -1214,6 +1214,40 @@ function renderVizConcept(d) {
   </div>`;
 }
 
+// ★ session — Claude Code 세션 타임라인
+function renderVizSession(d) {
+  const events = d.events || [];
+  if (!events.length) return `<div style="color:var(--muted); padding:20px; text-align:center;">no session events yet</div>`;
+  const colorByKind = {
+    prompt: "var(--user)", response: "var(--accent)", tool: "var(--search)",
+    file_edit: "var(--edit)", bash: "var(--bash)", stop: "var(--dim)", session_start: "var(--bash)",
+  };
+  const iconByKind = {
+    prompt: "💬", response: "🤖", tool: "🔧", file_edit: "✏️", bash: "$", stop: "⏹", session_start: "▶",
+  };
+  const items = events.map(e => {
+    const color = colorByKind[e.kind] || "var(--muted)";
+    const icon = iconByKind[e.kind] || "·";
+    const detail = e.tool ? `${e.tool}${e.target ? ` · ${e.target}` : ""}` : (e.target || "");
+    return `<div style="display:flex; gap:12px; padding:8px 12px; border-left:3px solid ${color}; margin-bottom:6px; background:var(--bg); border-radius:0 6px 6px 0;">
+      <div style="font-family:ui-monospace,monospace; font-size:11px; color:var(--muted); min-width:60px; padding-top:2px;">${esc(e.time || (e.ts || "").split("T")[1]?.slice(0,8) || "")}</div>
+      <div style="font-size:14px; min-width:24px; text-align:center;">${icon}</div>
+      <div style="flex:1; min-width:0;">
+        <div style="font-size:12px; color:${color}; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">${esc(e.kind)}</div>
+        ${detail ? `<div style="font-size:12px; color:var(--text); font-family:ui-monospace,monospace; margin-top:2px;">${esc(detail)}</div>` : ""}
+        ${e.text ? `<div style="font-size:12.5px; color:var(--text); margin-top:3px; white-space:pre-wrap; line-height:1.5;">${esc(e.text.slice(0, 200))}${e.text.length > 200 ? "…" : ""}</div>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+  return `<div>
+    <div style="font-size:13px; color:var(--muted); margin-bottom:10px;">
+      📅 <strong style="color:var(--text);">${esc(d.title || d.date || "session")}</strong>
+      &nbsp;·&nbsp; ${events.length} events
+    </div>
+    <div style="max-height:600px; overflow-y:auto; padding-right:8px;">${items}</div>
+  </div>`;
+}
+
 // ★ Phase 4: CRUD 매트릭스 — 엔티티 × 역할 권한
 function renderVizCrud(d) {
   const entities = d.entities || [], actors = d.actors || [], matrix = d.matrix || [];
@@ -1454,6 +1488,8 @@ const VIZ_RENDERERS = {
   screenmap: renderVizScreenmap, depgraph: renderVizDepgraph,
   // ★ Phase 5 (개념 이해 — 병신도 이해)
   concept: renderVizConcept,
+  // ★ session (AI 시대의 git log)
+  session: renderVizSession,
 };
 
 function renderViz(kind, data) {
